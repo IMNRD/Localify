@@ -68,11 +68,16 @@ Localify has **no API keys, passwords or accounts**, so there is nothing secret 
 ## Verify it worked
 Add a folder, double-click a song: you should hear it, the bar at the bottom should show the title and a moving progress line, and dragging that line should jump within the song.
 
-## Optional: make a single .exe
-```
-npm run dist
-```
-This builds a portable `Localify.exe` into the `dist` folder (takes a few minutes and downloads extra tools). Windows may show a "Windows protected your PC" warning because the file isn't code-signed; choose **More info → Run anyway** (only for a file you built yourself). *This step has not been tested by the author.*
+## Pin Localify to your taskbar (get a real Localify.exe)
+If you pin the window you started with `npm start`, Windows pins **Electron** (the engine) instead of Localify. To get a proper `Localify.exe` with the smiley icon:
+
+1. Double-click **`Build Localify App.bat`** (a few minutes; needs internet the first time).
+2. It creates `dist\win-unpacked\Localify.exe` and replaces the Desktop and Start-menu "Localify" icons so they open that exe.
+3. Unpin any old "Electron" icon, then right-click the new **Localify** icon on your Desktop → **Pin to taskbar**.
+
+Keep the `dist` folder where it is (the exe needs the files next to it; about 330 MB). Your library and playlists are shared with the `npm start` version (`%APPDATA%\Localify`). If you update Localify later (`git pull`), run the build file again.
+
+Prefer one single file? `npm run dist` makes a portable `Localify.exe` in `dist` instead; it starts a bit slower because it unpacks itself each time. Windows may warn "Windows protected your PC" for either, because they aren't code-signed: choose **More info → Run anyway** (only for a file you built yourself). If the build stops with "Cannot create symbolic link", turn on **Developer Mode** (Settings → Update & Security → For developers) or run the build file as Administrator.
 
 ## If something goes wrong
 1. **`'npm' is not recognized as an internal or external command`**: Node.js isn't installed, or Command Prompt was open during install. Install Node.js (see above), then close and reopen Command Prompt and try again.

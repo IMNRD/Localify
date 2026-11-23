@@ -6,10 +6,12 @@ echo.
 echo  Uninstall Localify
 echo  ------------------
 echo  This removes the Localify desktop and Start menu icons and the downloaded
-echo  components (the node_modules folder). Your music files are never touched.
+echo  components (node_modules) and the built Localify.exe (dist). Your music files are never touched.
 echo.
 
 tasklist /fi "imagename eq electron.exe" 2>nul | find /i "electron.exe" >nul
+if not errorlevel 1 goto running
+tasklist /fi "imagename eq Localify.exe" 2>nul | find /i "Localify.exe" >nul
 if not errorlevel 1 goto running
 
 set /p GO= Continue? [Y/N]: 
@@ -21,6 +23,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "foreach($d in @([Environ
 
 echo  Removing downloaded components...
 if exist node_modules rmdir /s /q node_modules
+if exist dist rmdir /s /q dist
 
 echo.
 echo  Your library, playlists and playlist cover images are saved in:

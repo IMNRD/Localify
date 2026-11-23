@@ -8,6 +8,7 @@ protocol.registerSchemesAsPrivileged([
 app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,MediaSessionService');
 if (process.env.LOCALIFY_USERDATA) app.setPath('userData', process.env.LOCALIFY_USERDATA);
 
+if (process.platform === 'win32') app.setAppUserModelId('local.localify.app'); // lets Windows group/pin the taskbar icon as Localify
 if (!app.requestSingleInstanceLock()) app.quit();
 
 let win;
