@@ -1,0 +1,32 @@
+{
+  "name": "localify",
+  "productName": "Localify",
+  "version": "1.0.0",
+  "description": "A Spotify-style player for your local music files",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/scanner.test.js",
+    "dist": "electron-builder --win portable"
+  },
+  "dependencies": {
+    "music-metadata": "^11.16.1"
+  },
+  "devDependencies": {
+    "electron": "^39.8.10",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "local.localify.app",
+    "productName": "Localify",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "assets/icon.png"
+    }
+  }
+}
