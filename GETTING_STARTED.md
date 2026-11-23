@@ -39,6 +39,11 @@ Everything else (the screens, player and playlists) is plain HTML, CSS and JavaS
 
 **Next time:** double-click **`Start Localify.bat`** in the folder. (A small minimized Command Prompt window stays in your taskbar while the app runs. Closing Localify closes it.)
 
+## Desktop icon
+1. Right-click `Start Localify.bat` → **Send to** → **Desktop (create shortcut)**, and rename the shortcut "Localify".
+2. Right-click the new shortcut → **Properties** → **Change Icon…** → **Browse…**, pick `assets\icon.ico` in the Localify folder, then **OK** → **OK**.
+3. Optional: right-click the shortcut → **Pin to taskbar** (or **Pin to Start**).
+
 ## Your first minute
 1. Click **Add music folder** and pick the folder that holds your music (subfolders are included).
 2. Wait a few seconds. A thin green line under the search bar shows the scan. Your songs, albums and artists appear.
