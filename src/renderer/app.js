@@ -4,7 +4,7 @@
   const { S, P, $, $$, esc, norm, fmt, fmtLong, icon, toast, art, plCover, likedCover } = L;
   const api = window.api;
   const RH = 56;
-  let hist = [{ view: 'home' }], hi = 0, chip = 'playlists', lists = [], cleanups = [], painters = new Set(), editingId = null;
+  let hist = [{ view: 'home' }], hi = 0, chip = 'playlists', lists = [], cleanups = [], painters = new Set(), editingId = null, pendingGroups = null;
   const route = () => hist[hi];
 
   // ---------- navigation ----------
@@ -203,7 +203,7 @@
       return `<h1 class="page">Settings</h1>
         <section><div class="sh"><h2>Music folders</h2></div>
           ${S.folders.map((f) => `<div class="frow">${icon('folder', 20)}<span class="fpath">${esc(f)}</span><button class="ghost" data-act="removefolder" data-arg="${esc(f)}">Remove</button></div>`).join('') || '<p class="muted">No folders yet.</p>'}
-          <div class="actions"><button class="primary" data-act="addfolder">Add music folder</button><button class="ghost" data-act="rescan">Rescan</button></div>
+          <div class="actions"><button class="primary" data-act="addfolder">Add music folder</button><button class="ghost" data-act="rescan">Rescan</button><button class="ghost" data-act="folderplaylists">Playlists from folders…</button></div>
           <p class="muted" id="scanTxt">${scanText()}</p></section>
         <section><div class="sh"><h2>Library</h2></div>
           <p class="muted">${plural(S.list.length, 'song')} · ${plural(S.albums.size, 'album')} · ${plural(S.artists.size, 'artist')}${gone ? ` · ${gone} missing` : ''}</p>
@@ -314,9 +314,22 @@
     showModal(`<h2>Delete playlist?</h2><p>“${esc(p.name)}” will be removed. This can't be undone.</p><div class="dactions"><span class="grow"></span><button class="ghost" data-act="modal-close">Cancel</button><button class="danger-btn" data-act="delete-go" data-arg="${id}">Delete</button></div>`);
   }
 
+  function offerGroups(root, manual) {
+    api.getFolderGroups(root).then((groups) => {
+      if (!groups.length) return manual ? toast('No new subfolders to turn into playlists') : undefined;
+      showModal(`<h2>Make playlists from your folders?</h2>
+        <p class="muted">Found ${plural(groups.length, 'subfolder')} with music. Localify can create one playlist for each.</p>
+        <div class="fgl">${groups.map((g) => `<label class="fg"><input type="checkbox" value="${esc(g.key)}" checked><span class="fn">${esc(g.name)}</span><span class="muted fc">${plural(g.count, 'song')}</span></label>`).join('')}</div>
+        <div class="dactions"><button class="ghost" data-act="fg-toggle">Select all / none</button><span class="grow"></span><button class="ghost" data-act="modal-close">Not now</button><button class="primary" data-act="fg-create">Create playlists</button></div>`);
+    }).catch(() => {});
+  }
+
   // ---------- actions ----------
   const actions_ = {
-    addfolder: () => api.addFolder().then((r) => { if (!r.canceled) { S.folders = r.folders; if (route().view === 'settings') renderView(true); } }),
+    addfolder: () => api.addFolder().then((r) => { if (!r.canceled) { S.folders = r.folders; pendingGroups = r.added; if (route().view === 'settings') renderView(true); } }),
+    folderplaylists: () => offerGroups(null, true),
+    'fg-toggle': () => { const boxes = $$('#modal .fg input'); const on = boxes.some((b) => !b.checked); boxes.forEach((b) => { b.checked = on; }); },
+    'fg-create': () => { const keys = $$('#modal .fg input:checked').map((b) => b.value); if (!keys.length) return closeModal(); api.createPlaylistsFromFolders(keys).then((r) => { closeModal(); chip = 'playlists'; merge(r); toast(`Created ${r.created} playlist${r.created === 1 ? '' : 's'}`); }); },
     rescan: () => api.rescan(),
     removefolder: (arg) => api.removeFolder(arg).then((r) => { S.folders = r.folders; }),
     newplaylist: () => api.createPlaylist().then((r) => { merge(r); navigate({ view: 'playlist', id: r.id }); }),
@@ -439,6 +452,7 @@
       $('#scanFoot').textContent = scanText();
       const t = $('#scanTxt'); if (t) t.textContent = scanText();
       if (was && !p.scanning && route().view === 'home' && !S.list.length) renderView(true);
+      if (was && !p.scanning && pendingGroups) { const root = pendingGroups; pendingGroups = null; offerGroups(root, false); }
     });
     api.onMediaKey((k) => (k === 'playpause' ? P.toggle() : k === 'next' ? P.next(true) : P.prev()));
   })();

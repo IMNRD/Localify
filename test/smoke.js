@@ -27,6 +27,12 @@ albums.forEach(([album, artist, color], ai) => {
   }
 });
 ff('-f', 'lavfi', '-i', 'sine=frequency=500:duration=5', '-metadata', 'title=<img src=x onerror=alert(1)>', '-metadata', 'artist=Hacker', '-metadata', 'album=XSS', path.join(music, 'xss.mp3'));
+// subfolder fixtures: music2/Rock/Album A (2 songs), music2/Jazz (1 song), music2/loose.mp3 (not in a subfolder)
+const music2 = path.join(root, 'music2');
+for (const [rel, n] of [['Rock/Album A/02 second.mp3', 2], ['Rock/Album A/01 first.mp3', 1], ['Jazz/blue.mp3', 3], ['loose.mp3', 4]]) {
+  fs.mkdirSync(path.dirname(path.join(music2, rel)), { recursive: true });
+  ff('-f', 'lavfi', '-i', `sine=frequency=${200 + n * 50}:duration=3`, '-metadata', `title=Folder Song ${n}`, '-metadata', 'artist=Folder Artist', '-metadata', 'album=Folder Album', '-metadata', `track=${n}`, path.join(music2, rel));
+}
 // image fixtures
 const img = path.join(root, 'wide.jpg'), webp = path.join(root, 'pic.webp'), gif = path.join(root, 'pic.gif'), fake = path.join(root, 'fake.png');
 ff('-f', 'lavfi', '-i', 'testsrc=s=800x400', '-frames:v', '1', img);
@@ -204,6 +210,41 @@ app.whenReady().then(async () => {
     assert.strictEqual(await js('L.S.playlists.length'), 0);
     assert.strictEqual(fs.readdirSync(imgDir).length, 0, 'cover file removed');
     assert.ok((await js('document.querySelector("#view").innerText')).includes('Good'), 'navigated home');
+  });
+
+  // playlists from subfolders
+  await js(`document.querySelector('[data-go=settings]').click()`); await sleep(200);
+  nextDialog = { canceled: false, filePaths: [music2] };
+  await js(`document.querySelector('[data-act=addfolder]').click()`);
+  for (let i = 0; i < 60 && (await js(`document.querySelector('#modal').hidden`)); i++) await sleep(250);
+  await shot('13-folder-playlists-prompt');
+  await check('after adding a folder with subfolders, user is prompted', async () => {
+    const t = await js(`document.querySelector('#modal').innerText`);
+    assert.ok(t.includes('Make playlists from your folders?'), t);
+    assert.strictEqual(await js(`document.querySelectorAll('#modal .fg').length`), 2);
+    assert.ok(t.includes('Album A') && t.includes('Jazz') && !t.includes('loose'), t);
+  });
+  await check('"Not now" closes the prompt and creates nothing', async () => {
+    await js(`document.querySelector('[data-act=modal-close]').click()`); await sleep(200);
+    assert.strictEqual(await js(`document.querySelector('#modal').hidden`), true); assert.strictEqual(await js('L.S.playlists.length'), 0);
+  });
+  await check('Settings button re-opens the prompt; Create makes ordered playlists', async () => {
+    await js(`document.querySelector('[data-act=folderplaylists]').click()`); await sleep(500);
+    assert.strictEqual(await js(`document.querySelector('#modal').hidden`), false);
+    await js(`document.querySelector('[data-act=fg-create]').click()`); await sleep(700);
+    const pls = await js(`L.S.playlists.map(p=>({n:p.name,t:p.trackIds.map(id=>L.S.tracks.get(id).title)}))`);
+    assert.deepStrictEqual(pls.map((p) => p.n).sort(), ['Album A', 'Jazz']);
+    assert.deepStrictEqual(pls.find((p) => p.n === 'Album A').t, ['Folder Song 1', 'Folder Song 2']);
+    assert.strictEqual(pls.find((p) => p.n === 'Jazz').t.length, 1);
+    assert.ok((await js(`document.querySelector('#liblist').innerText`)).includes('Album A'));
+  });
+  await check('converted folders are not offered again', async () => {
+    await js(`document.querySelector('[data-go=settings]').click()`); await sleep(150);
+    await js(`document.querySelector('[data-act=folderplaylists]').click()`); await sleep(400);
+    assert.strictEqual(await js(`document.querySelector('#modal').hidden`), true);
+    assert.ok((await js(`document.querySelector('#toast').innerText`)).includes('No new subfolders'));
+    assert.deepStrictEqual(await js(`window.api.createPlaylistsFromFolders(['zzzzzzzzzzzz']).then(r=>r.created)`), 0, 'unknown key creates nothing');
+    assert.strictEqual(await js(`window.api.getFolderGroups('/etc').then(()=>'ok').catch(()=>'rejected')`), 'rejected');
   });
 
   // 20k virtualization

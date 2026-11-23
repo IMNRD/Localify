@@ -6,7 +6,7 @@
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node test/scanner.test.js",
+    "test": "node test/scanner.test.js && node test/folders.test.js",
     "dist": "electron-builder --win portable"
   },
   "dependencies": {

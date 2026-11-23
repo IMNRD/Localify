@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('api', {
   addFolder: () => inv('addFolder'),
   removeFolder: (f) => inv('removeFolder', f),
   rescan: () => inv('rescan'),
+  getFolderGroups: (root) => inv('getFolderGroups', root),
+  createPlaylistsFromFolders: (keys) => inv('createPlaylistsFromFolders', keys),
   createPlaylist: (name) => inv('createPlaylist', name),
   updatePlaylist: (id, patch) => inv('updatePlaylist', id, patch),
   deletePlaylist: (id) => inv('deletePlaylist', id),

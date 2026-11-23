@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 const { scan } = require('./scanner');
+const { computeGroups } = require('./folders');
 // Decodes any image Chromium can read (png/jpg/webp/gif, honours EXIF rotation) in a throw-away,
 // script-isolated window, crops the centre square and returns a 640x640 JPEG buffer.
 async function toSquareJpeg(file) {
@@ -85,7 +86,7 @@ function register({ store, getWin }) {
     if (!store.state.folders.some((f) => norm(f) === norm(dir))) store.state.folders.push(dir);
     store.save();
     runScan();
-    return { folders: store.state.folders };
+    return { folders: store.state.folders, added: dir };
   });
   h('removeFolder', (folder) => {
     if (!isStr(folder, 1024)) throw new Error('Bad folder');
@@ -98,6 +99,27 @@ function register({ store, getWin }) {
     return { folders: store.state.folders };
   });
   h('rescan', () => { runScan(); return true; });
+
+  const rootArg = (root) => {
+    if (root === null || root === undefined) return null;
+    const known = isStr(root, 1024) && store.state.folders.find((f) => norm(f) === norm(root));
+    if (!known) throw new Error('Unknown folder');
+    return known;
+  };
+  h('getFolderGroups', (root) =>
+    computeGroups(store.state, rootArg(root)).map((g) => ({ key: g.key, name: g.name, rel: g.rel, count: g.tracks.length })));
+  h('createPlaylistsFromFolders', (keys) => {
+    if (!Array.isArray(keys) || keys.length > 2000 || !keys.every((k) => isStr(k, 12))) throw new Error('Bad folders');
+    const wanted = new Set(keys);
+    const groups = computeGroups(store.state).filter((g) => wanted.has(g.key));
+    const now = Date.now();
+    for (const g of groups) {
+      store.state.playlists.push({ id: 'p' + crypto.randomBytes(6).toString('hex'), name: g.name, description: '', image: null,
+        trackIds: g.tracks.map((t) => t.id), createdAt: now, updatedAt: now, sourceKey: g.key });
+    }
+    store.save();
+    return { created: groups.length, ...store.lite() };
+  });
 
   h('createPlaylist', (name) => {
     const n = store.state.playlists.length + 1;
