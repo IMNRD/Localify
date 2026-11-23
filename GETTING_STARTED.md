@@ -19,7 +19,14 @@ Everything else (the screens, player and playlists) is plain HTML, CSS and JavaS
   Check it worked: open **Command Prompt** (press the Windows key, type `cmd`, press Enter) and run `node -v`. You should see something like `v22.11.0`.
 - About 400 MB of free disk space (Electron is large).
 
-## Setup
+## Setup (easy way)
+1. Install Node.js (see above) and put the Localify folder somewhere permanent.
+2. Double-click **`Install Localify.bat`**. It checks Node.js, downloads the components, and adds a **Localify icon to your Desktop and Start menu**. It then offers to start the app.
+3. From then on, start Localify from that icon (or `Start Localify.bat`).
+
+To remove it, close Localify and double-click **`Uninstall Localify.bat`**. It removes the icons and the downloaded components, and asks before deleting your library and playlists (kept by default). Your music files are never touched. Afterwards you can delete the folder yourself.
+
+## Setup (manual way)
 1. Unzip the `localify` folder somewhere permanent, for example `C:\Users\YourName\localify`.
 2. Open Command Prompt and go to the folder:
    ```
@@ -39,7 +46,7 @@ Everything else (the screens, player and playlists) is plain HTML, CSS and JavaS
 
 **Next time:** double-click **`Start Localify.bat`** in the folder. (A small minimized Command Prompt window stays in your taskbar while the app runs. Closing Localify closes it.)
 
-## Desktop icon
+## Desktop icon (only if you set up manually)
 1. Right-click `Start Localify.bat` → **Send to** → **Desktop (create shortcut)**, and rename the shortcut "Localify".
 2. Right-click the new shortcut → **Properties** → **Change Icon…** → **Browse…**, pick `assets\icon.ico` in the Localify folder, then **OK** → **OK**.
 3. Optional: right-click the shortcut → **Pin to taskbar** (or **Pin to Start**).
