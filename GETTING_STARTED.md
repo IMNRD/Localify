@@ -53,7 +53,7 @@ To remove it, close Localify and double-click **`Uninstall Localify.bat`**. It r
 
 ## Your first minute
 1. Click **Add music folder** and pick the folder that holds your music (subfolders are included).
-2. Wait a few seconds. A thin green line under the search bar shows the scan. Your songs, albums and artists appear.
+2. Wait a few seconds. A thin green line under the search bar shows the scan. Your songs, albums and artists appear. If your folder has subfolders with music in them, Localify asks whether to **make a playlist from each subfolder**: all are ticked, so untick any you don't want, or choose **Not now**. You can do this later from **Settings → Playlists from folders…**.
 3. Click the **+** next to "Your Library" to create a playlist. Click its cover (or the pencil) → **Choose image…** to give it a picture. Right-click any song → **Add to playlist**.
 4. Added or moved files? Open **Settings** (gear icon) → **Rescan**. Localify also rescans every time it starts.
 
