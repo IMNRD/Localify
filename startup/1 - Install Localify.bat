@@ -1,6 +1,7 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
+set "ROOT=%CD%"
 title Install Localify
 echo.
 echo  Installing Localify
@@ -20,7 +21,7 @@ if errorlevel 1 goto npmfail
 
 echo.
 echo  Creating shortcuts...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=New-Object -ComObject WScript.Shell; foreach($d in @([Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('Programs'))){ $l=$s.CreateShortcut((Join-Path $d 'Localify.lnk')); $l.TargetPath='%~dp0Start Localify.bat'; $l.WorkingDirectory='%~dp0'; $l.IconLocation='%~dp0assets\icon.ico'; $l.WindowStyle=7; $l.Description='Localify music player'; $l.Save() }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=New-Object -ComObject WScript.Shell; foreach($d in @([Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('Programs'))){ $l=$s.CreateShortcut((Join-Path $d 'Localify.lnk')); $l.TargetPath='%ROOT%\Start Localify.bat'; $l.WorkingDirectory='%ROOT%'; $l.IconLocation='%ROOT%\assets\icon.ico'; $l.WindowStyle=7; $l.Description='Localify music player'; $l.Save() }"
 if errorlevel 1 (
   echo  Could not create shortcuts. You can still use "Start Localify.bat".
 ) else (

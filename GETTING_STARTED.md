@@ -21,7 +21,7 @@ Everything else (the screens, player and playlists) is plain HTML, CSS and JavaS
 
 ## Setup (easy way)
 1. Install Node.js (see above) and put the Localify folder somewhere permanent.
-2. Double-click **`Install Localify.bat`**. It checks Node.js, downloads the components, and adds a **Localify icon to your Desktop and Start menu**. It then offers to start the app.
+2. Open the **`startup`** folder and double-click **`1 - Install Localify.bat`**. It checks Node.js, downloads the components, and adds a **Localify icon to your Desktop and Start menu**. It then offers to start the app.
 3. From then on, start Localify from that icon (or `Start Localify.bat`).
 
 To remove it, close Localify and double-click **`Uninstall Localify.bat`**. It removes the icons and the downloaded components, and asks before deleting your library and playlists (kept by default). Your music files are never touched. Afterwards you can delete the folder yourself.
@@ -71,13 +71,13 @@ Add a folder, double-click a song: you should hear it, the bar at the bottom sho
 ## Pin Localify to your taskbar (get a real Localify.exe)
 If you pin the window you started with `npm start`, Windows pins **Electron** (the engine) instead of Localify. To get a proper `Localify.exe` with the smiley icon:
 
-1. Double-click **`Build Localify App.bat`** (a few minutes; needs internet the first time).
+1. Double-click **`startup\2 - Build Localify App.bat`** (a few minutes; needs internet the first time).
 2. It creates `dist\win-unpacked\Localify.exe` and replaces the Desktop and Start-menu "Localify" icons so they open that exe.
 3. Unpin any old "Electron" icon, then right-click the new **Localify** icon on your Desktop → **Pin to taskbar**.
 
-Keep the `dist` folder where it is (the exe needs the files next to it; about 330 MB). Your library and playlists are shared with the `npm start` version (`%APPDATA%\Localify`). If you update Localify later (`git pull`), run the build file again.
+Keep the `dist` folder where it is (the exe needs the files next to it; about 330 MB). Your library and playlists are shared with the `npm start` version (`%APPDATA%\Localify`). If you update Localify later (`git pull`), run `2 - Build Localify App.bat` again.
 
-Prefer one single file? `npm run dist` makes a portable `Localify.exe` in `dist` instead; it starts a bit slower because it unpacks itself each time. Windows may warn "Windows protected your PC" for either, because they aren't code-signed: choose **More info → Run anyway** (only for a file you built yourself). If the build stops with "Cannot create symbolic link", turn on **Developer Mode** (Settings → Update & Security → For developers) or run the build file as Administrator.
+Prefer one single file? `npm run dist` makes a portable `Localify.exe` in `dist` instead; it starts a bit slower because it unpacks itself each time. Windows may warn "Windows protected your PC" for either, because they aren't code-signed: choose **More info → Run anyway** (only for a file you built yourself). If the build stops with "Cannot create symbolic link", turn on **Developer Mode** (Settings → Update & Security → For developers) or run `2 - Build Localify App.bat` as Administrator.
 
 ## If something goes wrong
 1. **`'npm' is not recognized as an internal or external command`**: Node.js isn't installed, or Command Prompt was open during install. Install Node.js (see above), then close and reopen Command Prompt and try again.

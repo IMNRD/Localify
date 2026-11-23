@@ -16,7 +16,7 @@
 npm install
 npm start
 ```
-Windows users normally double-click `Install Localify.bat` then `Start Localify.bat` (see §4). `[discussion]` The owner runs it from `F:\AI-Projects\localify`.
+Windows users normally double-click `startup\1 - Install Localify.bat` then `Start Localify.bat` (see §4). `[discussion]` The owner runs it from `F:\AI-Projects\localify`.
 
 ## 2. High-level structural overview
 
@@ -89,10 +89,10 @@ Playlist: `{id /^p[a-f0-9]{12}$/, name, description≤300, image|null (filename)
 ### 3.3 Why things are the way they are
 
 - **Electron over a local web app / Tauri** `[discussion]` — the owner never chose; Claude recommended Electron (double-click app, media keys, native folder picker, no localhost server). The owner went with it.
-- **One spec, no sub-specs** `[discussion]` — components share one stack/builder; spec is `Localify_SPEC.md` (authoritative requirements, tokens, logo SVG, security table).
+- **One spec, no sub-specs** `[discussion]` — components share one stack/builder. The original spec file was later removed from the repo at the owner's request (cleanup); its last version is in git history (`git show 0e0fa6e:Localify_SPEC.md`). This document and `GETTING_STARTED.md` are now the requirements record. `[code]` (git history)
 - **JSON store, no SQLite** `[inferred]` — avoids native modules needing a Windows compiler; fine at tens of thousands of tracks but the whole file is rewritten on each save.
 - **Custom `localify://` protocol instead of `file://`** `[discussion]` — renderer can only reach indexed ids/hashes, never arbitrary paths.
-- **"Songs" nav item, Settings button for subfolder playlists, edit-dialog cover changes apply immediately** `[discussion]` — deliberate small additions/deviations from "pure Spotify"; documented in the spec.
+- **"Songs" nav item, Settings button for subfolder playlists, edit-dialog cover changes apply immediately** `[discussion]` — deliberate small additions/deviations from "pure Spotify".
 - **No Spotify name/logo; logo is a green minimalist smiley** `[discussion]` (`assets/logo.svg`, same SVG copied to `src/renderer/logo.svg` and rendered to `assets/icon.png` / `assets/icon.ico`).
 - **Real `Localify.exe` build** `[discussion]` — `npm start` pins `electron.exe`; `npm run pack` (`electron-builder --win dir`) produces `dist/win-unpacked/Localify.exe` with icon and product name embedded.
 
@@ -100,11 +100,11 @@ Playlist: `{id /^p[a-f0-9]{12}$/, name, description≤300, image|null (filename)
 
 | Task | Command | Notes |
 |---|---|---|
-| Install | `npm install` | Windows alt: `Install Localify.bat` (checks Node ≥ 20, runs npm install, creates Desktop + Start-menu shortcuts) |
+| Install | `npm install` | Windows alt: `startup\1 - Install Localify.bat` (checks Node ≥ 20, runs npm install, creates Desktop + Start-menu shortcuts) |
 | Run | `npm start` | Windows alt: `Start Localify.bat` (starts minimized `cmd /c npm start`; refuses if `node_modules\electron` missing) |
 | Unit tests | `npm test` | Runs `node test/scanner.test.js && node test/folders.test.js`; scanner test needs `ffmpeg` on PATH or it prints a skip message and exits 0 |
 | End-to-end smoke | `xvfb-run -a -s "-screen 0 1500x950x24" npx electron --no-sandbox test/smoke.js` | Linux; needs ffmpeg + xvfb; drives the real app, writes screenshots to `$SHOTS` (default `/tmp/localify-shots`); prints PASS/FAIL list; **not part of `npm test`** |
-| Real exe (folder) | `npm run pack` or `Build Localify App.bat` | → `dist/win-unpacked/Localify.exe`; bat also repoints Desktop/Start-menu shortcuts |
+| Real exe (folder) | `npm run pack` or `startup\2 - Build Localify App.bat` | → `dist/win-unpacked/Localify.exe`; bat also repoints Desktop/Start-menu shortcuts |
 | Portable single exe | `npm run dist` | `electron-builder --win portable`; slower startup |
 | Uninstall | `Uninstall Localify.bat` | Removes shortcuts, `node_modules`, `dist`; asks before deleting `%APPDATA%\Localify` (default keep); refuses while `electron.exe` or `Localify.exe` runs |
 
@@ -140,10 +140,10 @@ Playlist: `{id /^p[a-f0-9]{12}$/, name, description≤300, image|null (filename)
 - **Row height 56 px is duplicated** in `app.js` (`RH`) and `styles.css` (`.row{height:56px}`); virtualization breaks if they diverge. Grid templates for rows/header exist twice (with and without Album column).
 - **Renderer is classic scripts on `file://` with a strict CSP** (`default-src 'self'; img-src 'self' localify: data:; media-src localify:; style-src 'self' 'unsafe-inline'`): no ES modules, no inline `<script>`, no remote assets, no `fetch` to `localify:` from the page. `[code]` (`index.html`)
 - **Main process is CommonJS;** `music-metadata` must stay a dynamic `import()` (see `loadMm` in `scanner.js`).
-- **Design tokens** live in `:root` of `styles.css` (colours, radius); the accent `#34e07a` and logo SVG are specified in `Localify_SPEC.md`.
+- **Design tokens** live in `:root` of `styles.css` (colours, radius); the accent is `#34e07a` and the logo is `assets/logo.svg` (a copy lives in `src/renderer/logo.svg`; keep them identical).
 - **`.bat` files must stay ASCII + CRLF** (`.gitattributes`: `*.bat text eol=crlf`) and avoid parentheses inside `if (...)` block echo text. `[inferred]` (cmd.exe parsing)
 - **Working style requested by the owner** `[discussion]`: state assumptions, prefer the minimum code, make surgical changes, define verifiable success criteria and test them; don't add unrequested features. Commits in this repo end with the `Co-Authored-By: Claude …` and `Claude-Session:` trailers.
-- **Spec is the requirements source of truth:** update `Localify_SPEC.md` and `GETTING_STARTED.md` when behaviour changes.
+- **Docs:** update `GETTING_STARTED.md` (user-facing) and this file when behaviour or commands change. The owner removed the spec file; don't recreate it unless asked.
 
 ## 7. Gotchas / landmines / tech debt
 
@@ -189,20 +189,20 @@ Playlist: `{id /^p[a-f0-9]{12}$/, name, description≤300, image|null (filename)
 - **Add a file format:** extend `EXTS` in `scanner.js` and the `MIME` map in `protocols.js`; confirm Chromium can decode it.
 - **Add a track column:** `rowHTML` + the `.thead` markup in `table()` in `app.js`, plus both grid templates in `styles.css` (`.thead,.row` and the `.no-album` variants).
 - **Add a context-menu item:** `openTrackMenu` in `app.js` (items are `{label, fn | sub, danger?}`).
-- **Add a tag field:** `readTags` (`scanner.js`) → Track shape in `store`/spec → use it in `core.js` `setTracks` or views. Old libraries need a rescan; changing `mtimeMs/size` skipping may require forcing re-read.
+- **Add a tag field:** `readTags` (`scanner.js`) → Track shape in `store.js`/`core.js` → use it in `core.js` `setTracks` or views. Old libraries need a rescan; changing `mtimeMs/size` skipping may require forcing re-read.
 - **Add an icon:** add a path string to `P` in `core.js`, use `icon('name', size)`.
 - **Add a keyboard shortcut:** `keydown` listener in `app.js` (guard against typing in inputs like the Space handler).
-- **Change the theme:** edit `:root` tokens in `styles.css`; keep the logo/colours in `Localify_SPEC.md` in sync.
+- **Change the theme:** edit `:root` tokens in `styles.css`; keep `assets/logo.svg`, `src/renderer/logo.svg`, `assets/icon.png` and `assets/icon.ico` consistent if the logo colours change.
 - **Releases:** build with `npm run pack`, or add a signed installer target in `package.json` `build`.
 
 ## 9. Current state & TODOs
 
-**Done and tested on Linux:** everything in `Localify_SPEC.md` — library scan/rescan, tags + art, all views, virtualized lists, queue/shuffle/repeat, media keys wiring, playlists (create/rename/describe/delete/add/remove/reorder, drag reorder), cover images (png/jpg/webp/gif → 640² JPEG) with mosaic fallback, search (accent-insensitive), like/recent/play counts, subfolder→playlist prompt, install/uninstall/build scripts, icon (`.ico`/`.png`), `GETTING_STARTED.md`. `[code]` (tests) `[discussion]`
+**Done and tested on Linux:** everything in the original spec — library scan/rescan, tags + art, all views, virtualized lists, queue/shuffle/repeat, media keys wiring, playlists (create/rename/describe/delete/add/remove/reorder, drag reorder), cover images (png/jpg/webp/gif → 640² JPEG) with mosaic fallback, search (accent-insensitive), like/recent/play counts, subfolder→playlist prompt, install/uninstall/build scripts, icon (`.ico`/`.png`), `GETTING_STARTED.md`. `[code]` (tests) `[discussion]`
 
 **Frontier / next candidates:**
-- Verify on a real Windows 10 machine: `Install Localify.bat`, `Build Localify App.bat`, taskbar pinning of `Localify.exe`, media keys, first-run flow. (The owner has been running it; no failure reports were received before this handoff.) `[discussion]`
+- Verify on a real Windows 10 machine: `startup\1 - Install Localify.bat`, `startup\2 - Build Localify App.bat`, taskbar pinning of `Localify.exe`, media keys, first-run flow. (The owner has been running it; no failure reports were received before this handoff.) `[discussion]`
 - Fix the early-prompt race and add an extension allowlist for cover images (see §7).
-- Out of scope by design (spec non-goals): streaming/Spotify APIs, recommendations, lyrics, EQ, crossfade/gapless, visualizer, smart playlists, scrobbling, tag editing, sync, macOS/Linux packaging, auto-update, code signing, Windows system media overlay (SMTC). `[discussion]`
+- Out of scope by design (original spec non-goals): streaming/Spotify APIs, recommendations, lyrics, EQ, crossfade/gapless, visualizer, smart playlists, scrobbling, tag editing, sync, macOS/Linux packaging, auto-update, code signing, Windows system media overlay (SMTC). `[discussion]`
 - Rationale gaps: none known beyond those marked `[inferred]`.
 
 ## 10. Sensitive areas — handle with care
@@ -220,9 +220,10 @@ No auth, payments, accounts or secrets exist. `[code]` Treat these with care:
 **File map**
 ```
 package.json / package-lock.json   scripts, deps, electron-builder config (appId local.localify.app)
-Localify_SPEC.md                   requirements/spec + verification (source of truth for behaviour)
 GETTING_STARTED.md                 beginner setup, shortcuts, pinning, troubleshooting
-Install|Start|Build|Uninstall Localify.bat   Windows automation (ASCII, CRLF)
+startup/1 - Install Localify.bat, startup/2 - Build Localify App.bat   numbered one-time setup scripts
+Start Localify.bat, Uninstall Localify.bat                           daily launcher + uninstaller (repo root)
+                                   (all .bat: ASCII, CRLF; the startup/ ones `cd /d "%~dp0.."` and use %ROOT% for the repo root)
 assets/logo.svg | icon.png | icon.ico        smiley logo, 512px PNG, multi-size ICO
 src/main/{main,preload,ipc,store,scanner,folders,protocols}.js
 src/renderer/{index.html,styles.css,core.js,player.js,app.js,logo.svg}
@@ -241,7 +242,7 @@ test/{scanner.test.js,folders.test.js,smoke.js}
 Answer each from this document alone.
 
 1. **What does Localify do, and what is its entry point?** → §1: offline Spotify-style local player; `src/main/main.js` → `src/renderer/index.html`.
-2. **How do I install and start it on Windows and elsewhere?** → §1 and §4: `npm install && npm start`; or `Install Localify.bat` then `Start Localify.bat`.
+2. **How do I install and start it on Windows and elsewhere?** → §1 and §4: `npm install && npm start`; or `startup\1 - Install Localify.bat` then `Start Localify.bat`.
 3. **How do I run the tests, and which ones need extra tools?** → §4: `npm test` (scanner test needs ffmpeg); smoke test via `xvfb-run … electron --no-sandbox test/smoke.js` needs ffmpeg + xvfb and isn't in `npm test`.
 4. **Which files do I touch to add a new IPC operation?** → §8 recipe: `ipc.js`, `preload.js`, `app.js` (+ merge), `test/smoke.js`.
 5. **Where does a song play flow from click to counted play?** → §5-B: `app.js` dblclick → `P.play` → `localify://media/<id>` → `protocols.js` → `count()` → `recordPlay` IPC.
@@ -251,4 +252,4 @@ Answer each from this document alone.
 9. **Why can't `nativeImage` be used for cover images, and what is used?** → §3.1/§3.3: it can't decode WebP/GIF; hidden-window canvas via `toSquareJpeg`.
 10. **What was/wasn't verified, and where are the known bugs?** → §4 execution status (Linux only, Windows untested) and §7 (early prompt race, extension allowlist, unused destructure).
 11. **Where is user data stored and what does Uninstall delete?** → §3.1 store (`%APPDATA%\Localify`), §4/§10 uninstall behaviour.
-12. **How do I get a real `Localify.exe` for taskbar pinning?** → §3.3 and §4: `Build Localify App.bat` / `npm run pack` → `dist/win-unpacked/Localify.exe`.
+12. **How do I get a real `Localify.exe` for taskbar pinning?** → §3.3 and §4: `startup\2 - Build Localify App.bat` / `npm run pack` → `dist/win-unpacked/Localify.exe`.
