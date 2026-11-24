@@ -99,7 +99,7 @@ GitHub builds the APK (`.github/workflows/android.yml`) whenever the `LocalifyAn
    - `LOCALIFY_KEYSTORE_BASE64`: the whole contents of `LOCALIFY_KEYSTORE_BASE64.txt` (one long line).
    - `LOCALIFY_KEYSTORE_PASSWORD`: the password from `SECRETS-README.txt`.
    - `LOCALIFY_KEY_ALIAS`: `localify`.
-2. Open **Actions → Android APK → Run workflow** (or push to the branch). After about 5 minutes a new release with `Localify.apk` appears.
+2. Start a build: open <https://github.com/IMNRD/Localify/actions/workflows/android.yml>, click the newest run, then **Re-run jobs → Re-run all jobs**. (There is no "Run workflow" button, because GitHub only shows it for workflows on `main`.) Any later push to the branch builds on its own. After about 5 minutes a new release with `Localify.apk` appears.
 3. Back up `localify-release.jks` and `SECRETS-README.txt` somewhere safe and private: a USB stick or a password manager, **never** the repository. If the key is lost, the next build won't install over the old one; you'd have to uninstall Localify on the phone, which loses its library.
 
 Need a new key? In a folder outside the repository run `keytool -genkeypair -keystore localify-release.jks -storetype PKCS12 -alias localify -keyalg RSA -keysize 4096 -validity 10000` (keytool comes with Android Studio's Java), then on Windows `certutil -encode localify-release.jks key.txt` and paste the lines between the BEGIN and END lines as one line.

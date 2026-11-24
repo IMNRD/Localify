@@ -13,6 +13,8 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(MediaLibraryPlugin.class);
         super.onCreate(savedInstanceState);
+        // No bridge when the phone has no WebView: Capacitor is already showing its own message.
+        if (bridge == null) return;
         // Songs and videos go through MediaServer so seeking works; everything else is Capacitor's.
         bridge.setWebViewClient(
             new BridgeWebViewClient(bridge) {

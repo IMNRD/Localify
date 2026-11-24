@@ -14,6 +14,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -21,7 +22,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @CapacitorPlugin(
     name = "MediaLibrary",
     permissions = {
-        @Permission(alias = "media", strings = { Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_MEDIA_VIDEO }),
+        // Android 13+ asks for music and videos separately; each is used on its own if granted.
+        @Permission(alias = "audio", strings = { Manifest.permission.READ_MEDIA_AUDIO }),
+        @Permission(alias = "video", strings = { Manifest.permission.READ_MEDIA_VIDEO }),
         @Permission(alias = "storage", strings = { Manifest.permission.READ_EXTERNAL_STORAGE })
     }
 )
@@ -30,14 +33,17 @@ public class MediaLibraryPlugin extends Plugin {
     /** "media/<id>" or "video/<id>" -> absolute file path. */
     static final Map<String, String> FILES = new ConcurrentHashMap<>();
 
-    private static String alias() {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ? "media" : "storage";
+    private static final boolean SPLIT = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU;
+
+    private boolean allowed(String kind) {
+        return getPermissionState(SPLIT ? kind : "storage") == PermissionState.GRANTED;
     }
 
     @PluginMethod
     public void list(PluginCall call) {
-        if (getPermissionState(alias()) != PermissionState.GRANTED) {
-            requestPermissionForAlias(alias(), call, "permissionDone");
+        if (!allowed("audio") || !allowed("video")) {
+            // Android shows no dialog again for a permission the user refused for good; the callback still runs.
+            requestPermissionForAliases(SPLIT ? new String[] { "audio", "video" } : new String[] { "storage" }, call, "permissionDone");
             return;
         }
         respond(call);
@@ -45,26 +51,23 @@ public class MediaLibraryPlugin extends Plugin {
 
     @PermissionCallback
     private void permissionDone(PluginCall call) {
-        if (getPermissionState(alias()) == PermissionState.GRANTED) respond(call);
-        else {
-            JSObject r = new JSObject();
-            r.put("granted", false);
-            r.put("audio", new JSArray());
-            r.put("video", new JSArray());
-            call.resolve(r);
-        }
+        respond(call);
     }
 
     private void respond(PluginCall call) {
-        FILES.clear();
+        boolean audio = allowed("audio"), video = allowed("video");
+        Map<String, String> next = new HashMap<>();
         JSObject r = new JSObject();
-        r.put("granted", true);
-        r.put("audio", query("media", MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, MediaStore.Audio.Media.IS_MUSIC + " != 0", true));
-        r.put("video", query("video", MediaStore.Video.Media.EXTERNAL_CONTENT_URI, null, false));
+        r.put("granted", audio || video);
+        r.put("audio", audio ? query("media", MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, MediaStore.Audio.Media.IS_MUSIC + " != 0", true, next) : new JSArray());
+        r.put("video", video ? query("video", MediaStore.Video.Media.EXTERNAL_CONTENT_URI, null, false, next) : new JSArray());
+        // Swap in the new list without emptying it first, so a song that is playing never 404s mid-rescan.
+        FILES.putAll(next);
+        FILES.keySet().retainAll(next.keySet());
         call.resolve(r);
     }
 
-    private JSArray query(String kind, Uri uri, String where, boolean audio) {
+    private JSArray query(String kind, Uri uri, String where, boolean audio, Map<String, String> files) {
         JSArray out = new JSArray();
         String[] cols = audio
             ? new String[] { "_id", "_data", "title", "artist", "album", "track", "year", "duration", "_size", "date_added" }
@@ -75,7 +78,7 @@ public class MediaLibraryPlugin extends Plugin {
                 String path = c.getString(1);
                 if (path == null) continue;
                 String id = String.format("%016x", c.getLong(0));
-                FILES.put(kind + "/" + id, path);
+                files.put(kind + "/" + id, path);
                 JSObject o = new JSObject();
                 o.put("id", id);
                 o.put("path", path);
