@@ -151,6 +151,8 @@
       api.saveVideoProgress(v.id, v.pos, v.dur).catch(() => {});
     };
     const onAudio = () => vid.pause();
+    const syncVol = () => { vid.volume = P.audio.volume; vid.muted = P.audio.muted; }; // the bottom bar's volume/mute drive P.audio
+    syncVol();
     P.audio.pause();
     vid.addEventListener('loadedmetadata', () => { const v = find(); if (v && v.pos > 5 && v.pos < vid.duration * 0.95) vid.currentTime = v.pos; });
     vid.addEventListener('play', () => P.audio.pause());
@@ -158,10 +160,12 @@
     vid.addEventListener('pause', save);
     vid.addEventListener('error', () => toast("This video can't be played. Its format may not be supported."));
     P.audio.addEventListener('play', onAudio);
+    P.audio.addEventListener('volumechange', syncVol);
     window.addEventListener('beforeunload', save);
     cleanups.push(() => {
       save();
       P.audio.removeEventListener('play', onAudio);
+      P.audio.removeEventListener('volumechange', syncVol);
       window.removeEventListener('beforeunload', save);
       vid.pause(); vid.removeAttribute('src'); vid.load();
     });
