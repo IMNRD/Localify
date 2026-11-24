@@ -83,13 +83,17 @@ Keep the `dist` folder where it is (the exe needs the files next to it; about 33
 Prefer one single file? `npm run dist` makes a portable `Localify.exe` in `dist` instead; it starts a bit slower because it unpacks itself each time. Windows may warn "Windows protected your PC" for either, because they aren't code-signed: choose **More info → Run anyway** (only for a file you built yourself). If the build stops with "Cannot create symbolic link", turn on **Developer Mode** (Settings → Update & Security → For developers) or run `2 - Build Localify App.bat` as Administrator.
 
 ## Localify on an Android phone (test builds)
-The Android version is being built on the `LocalifyAndroidPort` branch; the full plan is in **`ANDROID_PORT.md`**. **Current stage: Phase 0 test build.** It lists and plays all the music and videos on your phone, with seeking. Playlists, likes, resume and choosing folders don't work on the phone yet (they come in Phase 1), and the layout is a temporary one-column version until Phase 2.
+The Android version is being built on the `LocalifyAndroidPort` branch; the full plan is in **`ANDROID_PORT.md`**. **Current stage: Phase 0 test build.** You choose your music and video folders, and it lists and plays what's in them, with seeking. Playlists, likes and video resume don't work on the phone yet (they come in Phase 1), album covers aren't shown yet, and the layout is a temporary one-column version until Phase 2.
 
 ### Install on your phone (easiest)
 1. On the phone, open **<https://github.com/IMNRD/Localify/releases/latest>** in Chrome or Samsung Internet, and tap **`Localify.apk`** under *Assets*.
 2. Open the downloaded file, from the download notification or the *My Files → Downloads* app. Android asks to allow installs from this source: tap **Settings**, turn on **Allow from this source**, go back and tap **Install**. If **Play Protect** warns about an unknown app, tap **More details → Install anyway**. This app was built by you, not the Play Store.
-3. Open Localify. When it asks to access music and videos (on older phones, "files and media"), tap **Allow**. Your songs appear under **Music** and your videos under **Videos**.
-   - Refused by mistake? Open **Settings** (gear) → **Add music folder** to be asked again. If Android doesn't ask any more, go to phone Settings → Apps → Localify → Permissions and allow it.
+3. Open Localify and tap **Add music folder**. Android's folder picker opens: go to your music folder (for example *Music*), tap **Use this folder**, then **Allow**.
+   - When Localify asks to access music and videos (on older phones, "files and media"), tap **Allow**. Your songs appear under **Music**.
+   - For videos, open **Videos → Add video folder** and do the same (for example *Movies* or *DCIM*).
+   - Add more folders, or remove one, any time in **Settings** (gear, top right). Localify remembers them.
+   - Android doesn't let apps pick the top level of the phone's storage or the *Download* folder. Pick a folder inside them instead; subfolders are included.
+   - Refused the permission by mistake? Go to phone Settings → Apps → Localify → Permissions and allow it, then tap **Rescan** in Localify's Settings.
 4. **To update:** open the same link and install the newer APK over the old one. Each new test build appears there automatically a few minutes after changes are pushed.
 5. **Samsung tip (needed from Phase 3, background play):** phone Settings → Apps → Localify → Battery → **Unrestricted**, so music keeps playing with the screen off.
 

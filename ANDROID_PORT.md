@@ -40,7 +40,7 @@ Rejected options:
 | `store.js` writes `library.json` with Node `fs` | Same JSON shape, saved with `@capacitor/filesystem` in the app's private storage |
 | `scanner.js` walks folders, reads tags with `music-metadata` | Native plugin asks Android's **MediaStore** (the phone's own media index) for audio and video files in the chosen folders. Title, artist, album, track number, year and duration come with it, so no tag parsing is needed. |
 | Album art extracted to `art/<sha1>.jpg` | Plugin saves Android's album thumbnail once per album to the app cache |
-| Folder dialog ("Add music folder") | A list of the phone's folders that hold music (or video); tick the ones to add |
+| Folder dialog ("Add music folder") | Android's own folder picker (`ACTION_OPEN_DOCUMENT_TREE`). The picked folder is turned into a file path, and only files inside the chosen folders are listed or served. **Done:** the chosen folders are saved in WebView `localStorage` for now; Phase 1 moves them into `library.json`. |
 | `localify://media`, `art`, `pl`, `video` protocol | `Capacitor.convertFileSrc(path)` (served from `http://localhost/_capacitor_file_/…`). All URLs go through one new helper, `api.url(kind, id)`, so the renderer stops hard-coding `localify://`. |
 | `toSquareJpeg` (hidden window crops the cover) | The phone's image picker (`<input type="file" accept="image/*">`), then the same centre-square crop on a canvas in the page |
 | Playlist, like, play count and video progress logic inside `ipc.js` | Moved to a shared `src/shared/library.js` used by both `ipc.js` and `api-android.js`, so it's written and tested once |
