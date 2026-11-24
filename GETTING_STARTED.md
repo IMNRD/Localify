@@ -82,6 +82,33 @@ Keep the `dist` folder where it is (the exe needs the files next to it; about 33
 
 Prefer one single file? `npm run dist` makes a portable `Localify.exe` in `dist` instead; it starts a bit slower because it unpacks itself each time. Windows may warn "Windows protected your PC" for either, because they aren't code-signed: choose **More info → Run anyway** (only for a file you built yourself). If the build stops with "Cannot create symbolic link", turn on **Developer Mode** (Settings → Update & Security → For developers) or run `2 - Build Localify App.bat` as Administrator.
 
+## Localify on an Android phone (in progress)
+The Android version is being built on the `LocalifyAndroidPort` branch; the full plan is in **`ANDROID_PORT.md`**. **It isn't ready yet**: the steps marked *(after the port is built)* won't work until that work lands. The one-time setup below can be done now.
+
+### What you'll need
+- **On the phone:** Android 7 or newer, and enough storage for your music and videos. The app itself is small.
+- **To install a ready-made APK:** nothing else. The plan is for GitHub to build the app file for you; see "Install on your phone".
+- **To build the app yourself on your PC:**
+  - **Node.js 22 or newer**. The Android tools need a newer version than the desktop app does. Check with `node -v`.
+  - **Android Studio "Otter" (2025.2.1) or newer**, from <https://developer.android.com/studio>. Accept the defaults; it installs Java for you.
+  - In Android Studio, open **More Actions → SDK Manager** and make sure **Android 16 (API 36)** under *SDK Platforms* and **Android SDK Build-Tools** and **Android SDK Platform-Tools** under *SDK Tools* are ticked. Click **Apply**.
+  - About 10 GB of free disk space for Android Studio and the SDK.
+
+### Build the app on your PC *(after the port is built)*
+1. In Command Prompt, in the Localify folder: `git checkout LocalifyAndroidPort`, then `npm install`.
+2. `npm run android:sync` copies the app's screens into the Android project.
+3. To try it, either:
+   - **Open in Android Studio:** run `npm run android:open`, then press the green ▶ button. It runs on an emulator, or on your phone plugged in by USB with **USB debugging** on. To turn that on, go to Settings → About phone, tap *Build number* 7 times, then Settings → System → Developer options → USB debugging.
+   - **Build an installable file:** run `npm run android:apk`. The APK appears in `android\app\build\outputs\apk\release\`.
+
+### Install on your phone *(after the port is built)*
+1. On the phone, open the Localify **Releases** page on GitHub and tap the latest `Localify.apk`. Or copy an APK you built to the phone by USB.
+2. Open the downloaded file. Android asks to allow installs from this source (your browser or file manager): tap **Settings**, turn on **Allow from this source**, go back and tap **Install**.
+3. Open Localify. When it asks to access music and videos, tap **Allow**. Then **Add music folder** shows the folders on your phone that contain music; tick the ones you want.
+4. To update later, install the newer APK the same way. Your library and playlists are kept, as long as the new APK was signed with the same key.
+
+**Good to know:** the phone keeps its own library. Playlists and resume positions are not synced with your PC.
+
 ## If something goes wrong
 1. **`'npm' is not recognized as an internal or external command`**: Node.js isn't installed, or Command Prompt was open during install. Install Node.js (see above), then close and reopen Command Prompt and try again.
 2. **`npm install` fails or hangs** (red `npm ERR!` lines, `ETIMEDOUT`, or antivirus messages): check your internet connection, pause any antivirus that blocks downloads for a minute, or try another network. Then delete the `node_modules` folder and run `npm install` again.

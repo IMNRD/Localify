@@ -11,6 +11,10 @@
 - **Placeholders:** video cards use a colour gradient derived from the id; no thumbnails are extracted.
 - **Tests:** `npm test` covers `scanVideos`; `test/smoke.js` now generates mp4/webm/mkv fixtures with ffmpeg (needs `libx264` and `libvpx-vp9`) and passed 64/64 on Linux.
 
+## 0b. Android port (planned, branch `LocalifyAndroidPort`)
+
+Plan only, no code yet: see `ANDROID_PORT.md`. In short, wrap the existing renderer with Capacitor 8, replace what's behind `window.api` with `api-android.js` plus a small native MediaStore plugin, move the pure library logic into `src/shared/` so both platforms share it, then add a touch layout, background playback and a signed-APK build. The Android section of `GETTING_STARTED.md` marks which steps work only after the port is built.
+
 ## 1. Exec summary
 
 **Localify** is an offline Windows 10 desktop music player that looks and navigates like Spotify but plays only the user's own local audio files (mp3, flac, m4a, aac, wav, ogg, opus). It indexes user-chosen folders, shows Home / Search / Songs / Liked Songs / Album / Artist / Queue / Settings views, plays with queue + shuffle + repeat, and lets the user create playlists with custom cover images (or an auto 2×2 art mosaic). After adding a folder it offers to turn each music subfolder into a playlist. `[discussion]` Built for one non-expert Windows user; no accounts, no network, no Spotify branding.
