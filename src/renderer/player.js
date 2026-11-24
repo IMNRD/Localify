@@ -33,7 +33,7 @@
   function setCurrent(autoplay) {
     const id = P.cur();
     if (!id) return;
-    audio.src = `localify://media/${id}`;
+    audio.src = L.url('media', id);
     P.counted = false;
     ls.set('last', id);
     if (autoplay) audio.play().catch(() => {});

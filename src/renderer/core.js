@@ -123,13 +123,16 @@
     toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
   };
 
+  // Media URL for a track/video/art/cover. Desktop serves localify://; other platforms supply api.url.
+  L.url = (kind, id) => (window.api && window.api.url ? window.api.url(kind, id) : `localify://${kind}/${id}`);
+
   // Cover helpers
   L.art = (hash, cls = '') =>
-    hash ? `<div class="art ${cls}"><img loading="lazy" alt="" src="localify://art/${hash}"></div>`
+    hash ? `<div class="art ${cls}"><img loading="lazy" alt="" src="${L.url('art', hash)}"></div>`
          : `<div class="art ph ${cls}">${L.icon('note', 24)}</div>`;
   L.likedCover = (cls = '') => `<div class="art liked ${cls}">${L.icon('heartfill', 24)}</div>`;
   L.plCover = (p, cls = '') => {
-    if (p.image) return `<div class="art ${cls}"><img alt="" src="localify://pl/${encodeURIComponent(p.image)}"></div>`;
+    if (p.image) return `<div class="art ${cls}"><img alt="" src="${L.url('pl', encodeURIComponent(p.image))}"></div>`;
     const hashes = [];
     for (const id of p.trackIds) {
       const h = S.tracks.get(id)?.artHash;
@@ -138,7 +141,7 @@
     }
     if (!hashes.length) return L.art(null, cls);
     if (hashes.length === 1) return L.art(hashes[0], cls);
-    const cells = [0, 1, 2, 3].map((i) => (hashes[i] ? `<img alt="" src="localify://art/${hashes[i]}">` : '<span></span>')).join('');
+    const cells = [0, 1, 2, 3].map((i) => (hashes[i] ? `<img alt="" src="${L.url('art', hashes[i])}">` : '<span></span>')).join('');
     return `<div class="art mosaic ${cls}">${cells}</div>`;
   };
 })();

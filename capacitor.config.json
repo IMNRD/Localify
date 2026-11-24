@@ -1,0 +1,8 @@
+{
+  "appId": "local.localify.app",
+  "appName": "Localify",
+  "webDir": "build/android-web",
+  "android": {
+    "backgroundColor": "#0b0b0c"
+  }
+}

@@ -1,6 +1,22 @@
 # Localify for Android: port plan
 
-Status: **plan only, nothing built yet.** Branch: `LocalifyAndroidPort`. Each phase ends with a check you can see working before the next one starts.
+Status: **Phase 0 built** (test APK; see below). Branch: `LocalifyAndroidPort`.
+
+### Phase 0 result
+- **Built:**
+  - `android/`: the Capacitor 8 project.
+  - `MediaLibraryPlugin.java`: lists the phone's audio and video through MediaStore.
+  - `MediaServer.java`: serves `/_localify/media|video/<id>` with real Range support, and only files the plugin listed.
+  - `src/android/api-android.js`: the read-only `window.api`.
+  - `scripts/android-web.js`: builds `build/android-web` with the Android CSP and a stopgap phone layout (`src/android/android.css`).
+  - `.github/workflows/android.yml`: a signed APK published at `releases/latest`.
+- **Seeking:** Capacitor's own file server answers Range requests with a correct header but always streams from byte 0, which breaks seeking. That's why `MediaServer` replaces it for media.
+- **Verified here:**
+  - `npm test`, including `test/api-android.test.js`.
+  - The desktop smoke test.
+  - The signed release APK builds with Gradle. Its signature, permissions and bundled files were checked with `apksigner` and `aapt`.
+  - The Android web build runs in Chromium with stand-ins for the plugin and MediaServer: a song plays and seeks, and an MP4 plays and seeks, with no console errors.
+- **Not verified:** a real phone or emulator. No emulator could run in the build machine (no hardware virtualization). The first test on a phone is the real Phase 0 check. Each phase ends with a check you can see working before the next one starts.
 
 ## Goal
 The same Localify on an Android phone: music library, playlists with covers, liked songs, queue, shuffle/repeat, search, Videos with sorting and resume, and the same look, adapted to a touch screen. Installed by tapping a downloaded `.apk` file. No Play Store, no account, no internet.

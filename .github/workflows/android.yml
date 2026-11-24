@@ -1,0 +1,72 @@
+# Builds a signed Localify.apk on every push to the Android branch and publishes it as the
+# latest GitHub Release, so it can be downloaded straight to a phone:
+#   https://github.com/IMNRD/Localify/releases/latest
+name: Android APK
+
+on:
+  push:
+    branches: [LocalifyAndroidPort]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Prepare Android project
+        run: npm run android:sync
+
+      - name: Signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.LOCALIFY_KEYSTORE_BASE64 }}
+        run: |
+          # Without the secret the APK is still built (to catch errors) but not published.
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "::warning::No signing key secret yet; the APK won't be published."; exit 0; fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/localify.jks"
+          echo "LOCALIFY_KEYSTORE=$RUNNER_TEMP/localify.jks" >> "$GITHUB_ENV"
+
+      - name: Build signed APK
+        working-directory: android
+        env:
+          LOCALIFY_KEYSTORE_PASSWORD: ${{ secrets.LOCALIFY_KEYSTORE_PASSWORD }}
+          LOCALIFY_KEY_ALIAS: ${{ secrets.LOCALIFY_KEY_ALIAS }}
+          LOCALIFY_VERSION_CODE: ${{ github.run_number }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$LOCALIFY_KEYSTORE" ]; then
+            echo "::error::Add the signing key secrets (GETTING_STARTED.md, Android section), then re-run this workflow."
+            exit 1
+          fi
+          cp android/app/build/outputs/apk/release/app-release.apk Localify.apk
+          gh release create "android-build-${{ github.run_number }}" Localify.apk \
+            --target "${{ github.sha }}" --latest \
+            --title "Localify for Android - test build ${{ github.run_number }}" \
+            --notes "Test build from the LocalifyAndroidPort branch (${GITHUB_SHA::7}). On your phone, tap Localify.apk below to download and install it. See GETTING_STARTED.md for help."

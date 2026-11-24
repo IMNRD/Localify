@@ -82,30 +82,41 @@ Keep the `dist` folder where it is (the exe needs the files next to it; about 33
 
 Prefer one single file? `npm run dist` makes a portable `Localify.exe` in `dist` instead; it starts a bit slower because it unpacks itself each time. Windows may warn "Windows protected your PC" for either, because they aren't code-signed: choose **More info → Run anyway** (only for a file you built yourself). If the build stops with "Cannot create symbolic link", turn on **Developer Mode** (Settings → Update & Security → For developers) or run `2 - Build Localify App.bat` as Administrator.
 
-## Localify on an Android phone (in progress)
-The Android version is being built on the `LocalifyAndroidPort` branch; the full plan is in **`ANDROID_PORT.md`**. **It isn't ready yet**: the steps marked *(after the port is built)* won't work until that work lands. The one-time setup below can be done now.
+## Localify on an Android phone (test builds)
+The Android version is being built on the `LocalifyAndroidPort` branch; the full plan is in **`ANDROID_PORT.md`**. **Current stage: Phase 0 test build.** It lists and plays all the music and videos on your phone, with seeking. Playlists, likes, resume and choosing folders don't work on the phone yet (they come in Phase 1), and the layout is a temporary one-column version until Phase 2.
 
-### What you'll need
-- **On the phone:** Android 7 or newer, and enough storage for your music and videos. The app itself is small.
-- **To install a ready-made APK:** nothing else. The plan is for GitHub to build the app file for you; see "Install on your phone".
-- **To build the app yourself on your PC:**
+### Install on your phone (easiest)
+1. On the phone, open **<https://github.com/IMNRD/Localify/releases/latest>** in Chrome or Samsung Internet, and tap **`Localify.apk`** under *Assets*.
+2. Open the downloaded file, from the download notification or the *My Files → Downloads* app. Android asks to allow installs from this source: tap **Settings**, turn on **Allow from this source**, go back and tap **Install**. If **Play Protect** warns about an unknown app, tap **More details → Install anyway**. This app was built by you, not the Play Store.
+3. Open Localify. When it asks to access music and videos (on older phones, "files and media"), tap **Allow**. Your songs appear under **Music** and your videos under **Videos**.
+   - Refused by mistake? Open **Settings** (gear) → **Add music folder** to be asked again. If Android doesn't ask any more, go to phone Settings → Apps → Localify → Permissions and allow it.
+4. **To update:** open the same link and install the newer APK over the old one. Each new test build appears there automatically a few minutes after changes are pushed.
+5. **Samsung tip (needed from Phase 3, background play):** phone Settings → Apps → Localify → Battery → **Unrestricted**, so music keeps playing with the screen off.
+
+### One-time: set up the automatic builds (repository owner)
+GitHub builds the APK (`.github/workflows/android.yml`) whenever the `LocalifyAndroidPort` branch changes. It needs the app's signing key, stored as three **repository secrets**. Every update must be signed with the same key, or phones refuse to install it over the old version.
+1. Open <https://github.com/IMNRD/Localify/settings/secrets/actions> and click **New repository secret** three times:
+   - `LOCALIFY_KEYSTORE_BASE64`: the whole contents of `LOCALIFY_KEYSTORE_BASE64.txt` (one long line).
+   - `LOCALIFY_KEYSTORE_PASSWORD`: the password from `SECRETS-README.txt`.
+   - `LOCALIFY_KEY_ALIAS`: `localify`.
+2. Open **Actions → Android APK → Run workflow** (or push to the branch). After about 5 minutes a new release with `Localify.apk` appears.
+3. Back up `localify-release.jks` and `SECRETS-README.txt` somewhere safe and private: a USB stick or a password manager, **never** the repository. If the key is lost, the next build won't install over the old one; you'd have to uninstall Localify on the phone, which loses its library.
+
+Need a new key? In a folder outside the repository run `keytool -genkeypair -keystore localify-release.jks -storetype PKCS12 -alias localify -keyalg RSA -keysize 4096 -validity 10000` (keytool comes with Android Studio's Java), then on Windows `certutil -encode localify-release.jks key.txt` and paste the lines between the BEGIN and END lines as one line.
+
+### Build it yourself on your PC (optional)
+You only need this to work on the Android code; the GitHub build above is enough to install it.
+- **What you'll need:**
   - **Node.js 22 or newer**. The Android tools need a newer version than the desktop app does. Check with `node -v`.
-  - **Android Studio "Otter" (2025.2.1) or newer**, from <https://developer.android.com/studio>. Accept the defaults; it installs Java for you.
+  - **Android Studio "Otter" (2025.2.1) or newer**, from <https://developer.android.com/studio>. Accept the defaults; it installs Java and the Android SDK for you.
   - In Android Studio, open **More Actions → SDK Manager** and make sure **Android 16 (API 36)** under *SDK Platforms* and **Android SDK Build-Tools** and **Android SDK Platform-Tools** under *SDK Tools* are ticked. Click **Apply**.
-  - About 10 GB of free disk space for Android Studio and the SDK.
-
-### Build the app on your PC *(after the port is built)*
-1. In Command Prompt, in the Localify folder: `git checkout LocalifyAndroidPort`, then `npm install`.
-2. `npm run android:sync` copies the app's screens into the Android project.
-3. To try it, either:
-   - **Open in Android Studio:** run `npm run android:open`, then press the green ▶ button. It runs on an emulator, or on your phone plugged in by USB with **USB debugging** on. To turn that on, go to Settings → About phone, tap *Build number* 7 times, then Settings → System → Developer options → USB debugging.
-   - **Build an installable file:** run `npm run android:apk`. The APK appears in `android\app\build\outputs\apk\release\`.
-
-### Install on your phone *(after the port is built)*
-1. On the phone, open the Localify **Releases** page on GitHub and tap the latest `Localify.apk`. Or copy an APK you built to the phone by USB.
-2. Open the downloaded file. Android asks to allow installs from this source (your browser or file manager): tap **Settings**, turn on **Allow from this source**, go back and tap **Install**.
-3. Open Localify. When it asks to access music and videos, tap **Allow**. Then **Add music folder** shows the folders on your phone that contain music; tick the ones you want.
-4. To update later, install the newer APK the same way. Your library and playlists are kept, as long as the new APK was signed with the same key.
+  - About 10 GB of free disk space.
+- **Steps:**
+  1. In Command Prompt, in the Localify folder: `git checkout LocalifyAndroidPort`, then `npm install`.
+  2. `npm run android:sync` copies the app's screens into the Android project (`android\`). Run it after every change to `src\`.
+  3. To try it, either:
+     - **Open in Android Studio:** run `npm run android:open`, then press the green ▶ button. It runs on an emulator, or on your phone plugged in by USB with **USB debugging** on. To turn that on, go to Settings → About phone → Software information, tap *Build number* 7 times, then Settings → Developer options → USB debugging.
+     - **Build an installable file:** run `npm run android:apk`. The APK appears in `android\app\build\outputs\apk\release\`. Without the signing-key variables it's signed with your PC's debug key, so it won't install over a GitHub build: uninstall that first.
 
 **Good to know:** the phone keeps its own library. Playlists and resume positions are not synced with your PC.
 

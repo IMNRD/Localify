@@ -13,7 +13,7 @@
 
 ## 0b. Android port (planned, branch `LocalifyAndroidPort`)
 
-Plan only, no code yet: see `ANDROID_PORT.md`. In short, wrap the existing renderer with Capacitor 8, replace what's behind `window.api` with `api-android.js` plus a small native MediaStore plugin, move the pure library logic into `src/shared/` so both platforms share it, then add a touch layout, background playback and a signed-APK build. The Android section of `GETTING_STARTED.md` marks which steps work only after the port is built.
+Phase 0 is built: see `ANDROID_PORT.md` ("Phase 0 result"). The Android web build is `npm run android:web`, which copies `src/renderer` and adds `src/android/*`; desktop files are untouched apart from the `L.url(kind, id)` helper in `core.js`, which every media URL now goes through. GitHub Actions publishes a signed APK; it needs the `LOCALIFY_KEYSTORE_BASE64`, `LOCALIFY_KEYSTORE_PASSWORD` and `LOCALIFY_KEY_ALIAS` secrets. Capacitor's packages are devDependencies so electron-builder doesn't ship them. In short, wrap the existing renderer with Capacitor 8, replace what's behind `window.api` with `api-android.js` plus a small native MediaStore plugin, move the pure library logic into `src/shared/` so both platforms share it, then add a touch layout, background playback and a signed-APK build. The Android section of `GETTING_STARTED.md` marks which steps work only after the port is built.
 
 ## 1. Exec summary
 

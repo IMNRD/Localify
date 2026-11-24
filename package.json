@@ -6,14 +6,21 @@
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node test/scanner.test.js && node test/folders.test.js",
+    "test": "node test/scanner.test.js && node test/folders.test.js && node test/api-android.test.js",
     "dist": "electron-builder --win portable",
-    "pack": "electron-builder --win dir"
+    "pack": "electron-builder --win dir",
+    "android:web": "node scripts/android-web.js",
+    "android:sync": "npm run android:web && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:apk": "npm run android:sync && cd android && gradlew assembleRelease"
   },
   "dependencies": {
     "music-metadata": "^11.16.1"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
     "electron": "^39.8.10",
     "electron-builder": "^26.18.0"
   },

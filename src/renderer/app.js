@@ -211,7 +211,7 @@
       const v = S.videos.find((x) => x.id === r.id);
       if (!v) return empty('Video not found', 'It may have been removed from your library.', false);
       if (!v.available) return empty('File missing', `“${v.name}” is no longer in your video folders.`, false);
-      return `<div class="vplayer"><video id="vid" controls autoplay data-id="${v.id}" src="localify://video/${v.id}"></video></div>
+      return `<div class="vplayer"><video id="vid" controls autoplay data-id="${v.id}" src="${L.url('video', v.id)}"></video></div>
         <h1 class="page">${esc(v.name)}</h1><p class="muted">${esc(v.ext.toUpperCase())} · ${fmtSize(v.size)}</p>`;
     },
     search(r) {

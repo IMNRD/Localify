@@ -1,0 +1,22 @@
+/* Android only (appended to styles.css by scripts/android-web.js).
+   shortcut: a minimal single-column layout so test builds are usable; Phase 2 replaces it with the real phone layout. */
+@media (max-width: 700px) {
+  #app { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; padding: 4px; gap: 4px }
+  #side { grid-template-rows: auto }
+  #side .lib, .brand, .p-right { display: none }
+  .nav { flex-direction: row; justify-content: space-around; padding: 4px }
+  .navbtn { flex-direction: column; gap: 2px; font-size: 12px; padding: 6px 10px }
+  .topbar { padding: 0 12px }
+  .searchbox { margin-left: 0 }
+  #view { padding: 8px 12px 24px }
+  .cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) }
+  .tiles { grid-template-columns: 1fr }
+  .thead, .row { grid-template-columns: 36px 1fr 36px 72px }
+  .thead > :nth-child(3), .row .c-album { display: none }
+  #player { grid-template-columns: 1fr; gap: 4px; padding: 6px 8px }
+}
+/* Touch screens have no hover: always show the buttons desktop reveals on hover. */
+@media (hover: none) {
+  .row .more, .row .c-like { opacity: 1 }
+  .cardplay { opacity: 1; transform: none }
+}
