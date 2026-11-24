@@ -288,6 +288,14 @@ app.whenReady().then(async () => {
     const s = await js('({t:document.querySelector("#vid").currentTime, err:document.querySelector("#vid").error?.code, music:L.P.audio.paused, nav:document.querySelector("[data-go=videos]").classList.contains("active")})');
     assert.ok(s.t > 0.5 && !s.err, JSON.stringify(s)); assert.strictEqual(s.music, true, 'music paused'); assert.strictEqual(s.nav, true, 'Videos highlighted');
   });
+  await check('bottom-bar volume slider and mute control the video', async () => {
+    await js(`(v => { v.value = 30; v.dispatchEvent(new Event('input')); })(document.querySelector('#vol'))`);
+    assert.strictEqual(await js('document.querySelector("#vid").volume'), 0.3);
+    await js(`document.querySelector('#bMute').click()`);
+    assert.strictEqual(await js('document.querySelector("#vid").muted'), true);
+    await js(`document.querySelector('#bMute').click()`);
+    assert.strictEqual(await js('document.querySelector("#vid").muted'), false);
+  });
   await check('Space toggles the video, not the music', async () => {
     await js(`document.body.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}))`); await sleep(200);
     assert.deepStrictEqual(await js('[document.querySelector("#vid").paused, L.P.audio.paused]'), [true, true]);
