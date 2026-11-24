@@ -5,16 +5,18 @@ const path = require('path');
 const crypto = require('crypto');
 
 const EXTS = new Set(['.mp3', '.flac', '.m4a', '.aac', '.wav', '.ogg', '.opus']);
+// Only containers Chromium can play without bundling a decoder (no avi/wmv/flv).
+const VIDEO_EXTS = new Set(['.mp4', '.m4v', '.webm', '.mov', '.mkv']);
 const sha1 = (data) => crypto.createHash('sha1').update(data).digest('hex');
 const trackId = (p) => sha1(p.toLowerCase()).slice(0, 16);
 
-async function walk(dir, out) {
+async function walk(dir, out, exts = EXTS) {
   let entries;
   try { entries = await fsp.readdir(dir, { withFileTypes: true }); } catch { return; }
   for (const e of entries) {
     const full = path.join(dir, e.name);
-    if (e.isDirectory()) await walk(full, out);
-    else if (e.isFile() && EXTS.has(path.extname(e.name).toLowerCase())) out.push(full);
+    if (e.isDirectory()) await walk(full, out, exts);
+    else if (e.isFile() && exts.has(path.extname(e.name).toLowerCase())) out.push(full);
   }
 }
 
@@ -94,4 +96,31 @@ async function scan(store, artDir, onProgress = () => {}, onChunk = () => {}) {
   return unique.length;
 }
 
-module.exports = { scan, trackId, EXTS };
+// Videos are indexed by file only; duration and resume position come from the player.
+async function scanVideos(store) {
+  const files = [];
+  for (const folder of store.state.videoFolders) await walk(folder, files, VIDEO_EXTS);
+  const seen = new Set();
+  const now = Date.now();
+  for (const file of files) {
+    const id = trackId(file);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    try {
+      const st = await fsp.stat(file);
+      const old = store.state.videos[id];
+      store.state.videos[id] = {
+        id, path: file, name: path.basename(file, path.extname(file)), ext: path.extname(file).slice(1).toLowerCase(),
+        size: st.size, addedAt: old?.addedAt || now, available: true,
+        dur: old?.dur || 0, pos: old?.pos || 0, watchedAt: old?.watchedAt || 0,
+      };
+    } catch (err) {
+      console.warn('Skipping', file, err.message);
+    }
+  }
+  for (const v of Object.values(store.state.videos)) if (!seen.has(v.id)) v.available = false;
+  store.save();
+  return seen.size;
+}
+
+module.exports = { scan, scanVideos, trackId, EXTS, VIDEO_EXTS };

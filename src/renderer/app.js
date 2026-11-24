@@ -4,7 +4,7 @@
   const { S, P, $, $$, esc, norm, fmt, fmtLong, icon, toast, art, plCover, likedCover } = L;
   const api = window.api;
   const RH = 56;
-  let hist = [{ view: 'home' }], hi = 0, chip = 'playlists', lists = [], cleanups = [], painters = new Set(), editingId = null, pendingGroups = null;
+  let hist = [{ view: 'music' }], hi = 0, chip = 'playlists', lists = [], cleanups = [], painters = new Set(), editingId = null, pendingGroups = null;
   const route = () => hist[hi];
 
   // ---------- navigation ----------
@@ -51,6 +51,28 @@
   const artistCard = (a) => card({ go: `artist:${a.id}`, play: `artist:${a.id}`, cover: art(a.artHash), title: a.name, sub: 'Artist', round: true });
   const playlistCard = (p) => card({ go: `playlist:${p.id}`, play: `playlist:${p.id}`, cover: plCover(p), title: p.name, sub: plural(p.trackIds.length, 'song') });
   const trackCard = (t) => card({ play: `track:${t.id}`, cover: art(t.artHash), title: t.title, sub: t.artist });
+  const fmtSize = (b) => (b >= 1e9 ? `${(b / 1e9).toFixed(1)} GB` : `${Math.max(1, Math.round(b / 1e6))} MB`);
+  const finished = (v) => v.dur > 0 && v.pos >= v.dur * 0.95;
+  const inProgress = (v) => v.available && v.pos > 0 && !finished(v);
+  const byWatched = (a, b) => b.watchedAt - a.watchedAt;
+  function videoCard(v) {
+    const pct = v.dur ? Math.min(100, (v.pos / v.dur) * 100) : 0;
+    const badge = inProgress(v) && v.dur ? `${fmt(v.dur - v.pos)} left` : v.dur ? fmt(v.dur) : '';
+    const hue = parseInt(v.id.slice(0, 4), 16) % 360;
+    return `<div class="vcard ${v.available ? '' : 'gone'}" data-go="video:${v.id}" title="${esc(v.name)}"><div class="thumb" style="background:linear-gradient(135deg,hsl(${hue} 45% 32%),hsl(${(hue + 40) % 360} 35% 12%))">${icon('play', 36)}${badge ? `<span class="vdur">${badge}</span>` : ''}${pct ? `<div class="vprog"><b style="width:${pct}%"></b></div>` : ''}</div>
+      <div class="ct">${esc(v.name)}</div><div class="cs">${finished(v) ? 'Watched' : `${esc(v.ext.toUpperCase())} · ${fmtSize(v.size)}`}</div></div>`;
+  }
+  const VSORTS = { name: 'Name', added: 'Date added', length: 'Length', size: 'Size', type: 'Type' };
+  const VCMP = {
+    name: (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }),
+    added: (a, b) => b.addedAt - a.addedAt,
+    length: (a, b) => (b.dur || -1) - (a.dur || -1),
+    size: (a, b) => b.size - a.size,
+    type: (a, b) => a.ext.localeCompare(b.ext),
+  };
+  let vsort = 'name';
+  try { if (VSORTS[localStorage.getItem('lf.vsort')]) vsort = localStorage.getItem('lf.vsort'); } catch {}
+  const noVideos = () => `<div class="empty"><img src="logo.svg" width="96" height="96" alt=""><h2>No videos yet</h2><p>Add a folder with your videos (MP4, M4V, WebM, MOV or MKV).</p><button class="primary" data-act="addvideofolder">Add video folder</button></div>`;
 
   function empty(title, sub, cta) {
     return `<div class="empty"><img src="logo.svg" width="96" height="96" alt=""><h2>${esc(title)}</h2><p>${esc(sub)}</p>${cta ? `<button class="primary" data-act="addfolder">Add music folder</button>` : ''}</div>`;
@@ -116,9 +138,50 @@
     paint(true);
   }
 
+  // Resumes from the saved spot, saves every 5 s / on pause / on leave, and never plays over music.
+  function mountVideo(vid) {
+    const id = vid.dataset.id;
+    const find = () => S.videos.find((x) => x.id === id); // S.videos is replaced on every library refresh
+    let last = 0;
+    const save = () => {
+      const d = vid.duration, v = find();
+      if (!v || !d || !isFinite(d)) return;
+      v.pos = vid.ended || vid.currentTime >= d * 0.95 ? d : vid.currentTime;
+      v.dur = d; v.watchedAt = Date.now();
+      api.saveVideoProgress(v.id, v.pos, v.dur).catch(() => {});
+    };
+    const onAudio = () => vid.pause();
+    P.audio.pause();
+    vid.addEventListener('loadedmetadata', () => { const v = find(); if (v && v.pos > 5 && v.pos < vid.duration * 0.95) vid.currentTime = v.pos; });
+    vid.addEventListener('play', () => P.audio.pause());
+    vid.addEventListener('timeupdate', () => { if (Date.now() - last > 5000) { last = Date.now(); save(); } });
+    vid.addEventListener('pause', save);
+    vid.addEventListener('error', () => toast("This video can't be played. Its format may not be supported."));
+    P.audio.addEventListener('play', onAudio);
+    window.addEventListener('beforeunload', save);
+    cleanups.push(() => {
+      save();
+      P.audio.removeEventListener('play', onAudio);
+      window.removeEventListener('beforeunload', save);
+      vid.pause(); vid.removeAttribute('src'); vid.load();
+    });
+  }
+
   // ---------- views ----------
   const VIEWS = {
     home() {
+      const recent = S.videos.filter((v) => v.watchedAt).sort(byWatched).slice(0, 8);
+      if (!S.playlists.length && !recent.length) {
+        return `<h1 class="page">Home</h1>` + empty('Nothing here yet', 'Your top playlists and recently watched videos will show up here.', false);
+      }
+      const plays = (p) => p.trackIds.reduce((a, id) => a + (S.tracks.get(id)?.plays || 0), 0);
+      const top = S.playlists.map((p) => [p, plays(p)]).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([p]) => p);
+      let out = `<h1 class="page">Home</h1>`;
+      if (top.length) out += section('Your top playlists', `<div class="cards">${top.map(playlistCard).join('')}</div>`);
+      if (recent.length) out += section('Recently watched', `<div class="vcards">${recent.map(videoCard).join('')}</div>`);
+      return out;
+    },
+    music() {
       if (!S.list.length) return libraryEmpty();
       const h = new Date().getHours();
       let out = `<h1 class="page">${h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'}</h1>`;
@@ -128,7 +191,24 @@
       if (recent.length) out += section('Recently played', `<div class="cards">${recent.map(trackCard).join('')}</div>`);
       const added = [...S.albums.values()].sort((a, b) => b.addedAt - a.addedAt).slice(0, 12);
       out += section('Recently added', `<div class="cards">${added.map(albumCard).join('')}</div>`);
+      out += section(`All songs · ${S.list.length.toLocaleString()}`, actions('songs') + table(S.sorted.map((t) => t.id)));
       return out;
+    },
+    videos() {
+      if (!S.videos.length) return `<h1 class="page">Videos</h1>` + noVideos();
+      const cont = S.videos.filter(inProgress).sort(byWatched).slice(0, 12);
+      const all = S.videos.slice().sort(VCMP[vsort]);
+      const sorts = `<div class="sorts">Sort by ${Object.entries(VSORTS).map(([k, n]) => `<button class="${k === vsort ? 'on' : ''}" data-act="vsort" data-arg="${k}">${n}</button>`).join('')}</div>`;
+      return `<h1 class="page">Videos</h1>` +
+        (cont.length ? section('Continue watching', `<div class="vcards">${cont.map(videoCard).join('')}</div>`) : '') +
+        `<section><div class="sh"><h2>All videos · ${all.length.toLocaleString()}</h2>${sorts}</div><div class="vcards">${all.map(videoCard).join('')}</div></section>`;
+    },
+    video(r) {
+      const v = S.videos.find((x) => x.id === r.id);
+      if (!v) return empty('Video not found', 'It may have been removed from your library.', false);
+      if (!v.available) return empty('File missing', `“${v.name}” is no longer in your video folders.`, false);
+      return `<div class="vplayer"><video id="vid" controls autoplay data-id="${v.id}" src="localify://video/${v.id}"></video></div>
+        <h1 class="page">${esc(v.name)}</h1><p class="muted">${esc(v.ext.toUpperCase())} · ${fmtSize(v.size)}</p>`;
     },
     search(r) {
       const q = norm(r.q).trim();
@@ -152,10 +232,6 @@
       if (pls.length) out += section('Playlists', `<div class="cards">${pls.map(playlistCard).join('')}</div>`);
       return out;
     },
-    songs() {
-      if (!S.list.length) return libraryEmpty();
-      return `<h1 class="page">Songs</h1><p class="muted">${plural(S.list.length, 'song')}</p>${actions('songs')}${table(S.sorted.map((t) => t.id))}`;
-    },
     liked() {
       const ids = S.likedOrder;
       return hero({ type: 'Playlist', title: 'Liked Songs', sub: plural(ids.length, 'song'), cover: likedCover() }) +
@@ -168,7 +244,7 @@
       const extra = `<button class="ib lg" data-act="editpl" data-arg="${p.id}" title="Edit details">${icon('edit', 24)}</button><button class="ib lg" data-act="delpl" data-arg="${p.id}" title="Delete playlist">${icon('trash', 24)}</button>`;
       return hero({ type: 'Playlist', title: p.name, desc: p.description, sub: `${plural(ids.length, 'song')}${ids.length ? ', ' + fmtLong(totalSec(ids)) : ''}`, cover: plCover(p), editId: p.id }) +
         actions(`playlist:${p.id}`, extra) +
-        (ids.length ? table(ids, { playlistId: p.id }) : `<div class="empty small"><h2>Nothing here yet</h2><p>Add songs from Songs or Search</p></div>`);
+        (ids.length ? table(ids, { playlistId: p.id }) : `<div class="empty small"><h2>Nothing here yet</h2><p>Add songs from Music or Search</p></div>`);
     },
     album(r) {
       const a = S.albums.get(r.id);
@@ -205,6 +281,10 @@
           ${S.folders.map((f) => `<div class="frow">${icon('folder', 20)}<span class="fpath">${esc(f)}</span><button class="ghost" data-act="removefolder" data-arg="${esc(f)}">Remove</button></div>`).join('') || '<p class="muted">No folders yet.</p>'}
           <div class="actions"><button class="primary" data-act="addfolder">Add music folder</button><button class="ghost" data-act="rescan">Rescan</button><button class="ghost" data-act="folderplaylists">Playlists from folders…</button></div>
           <p class="muted" id="scanTxt">${scanText()}</p></section>
+        <section><div class="sh"><h2>Video folders</h2></div>
+          ${S.videoFolders.map((f) => `<div class="frow">${icon('folder', 20)}<span class="fpath">${esc(f)}</span><button class="ghost" data-act="removevideofolder" data-arg="${esc(f)}">Remove</button></div>`).join('') || '<p class="muted">No folders yet.</p>'}
+          <div class="actions"><button class="primary" data-act="addvideofolder">Add video folder</button></div>
+          <p class="muted">${plural(S.videos.length, 'video')}. Plays MP4, M4V, WebM, MOV and most MKV files.</p></section>
         <section><div class="sh"><h2>Library</h2></div>
           <p class="muted">${plural(S.list.length, 'song')} · ${plural(S.albums.size, 'album')} · ${plural(S.artists.size, 'artist')}${gone ? ` · ${gone} missing` : ''}</p>
           <p class="muted">Last scanned: ${S.lastScanAt ? esc(new Date(S.lastScanAt).toLocaleString()) : 'never'}</p></section>
@@ -219,6 +299,7 @@
     const r = route();
     $('#view').innerHTML = (VIEWS[r.view] || VIEWS.home)(r);
     $$('#view .vlist').forEach((h) => mountList(h, lists[+h.dataset.n]));
+    if ($('#vid')) mountVideo($('#vid'));
     sc.scrollTop = keep ? y : 0;
     syncChrome();
   }
@@ -226,7 +307,8 @@
     const r = route();
     $('#bBack').disabled = hi === 0;
     $('#bFwd').disabled = hi >= hist.length - 1;
-    $$('.nav [data-go]').forEach((el) => el.classList.toggle('active', el.dataset.go.split(':')[0] === r.view));
+    const nav = r.view === 'video' ? 'videos' : r.view;
+    $$('.nav [data-go]').forEach((el) => el.classList.toggle('active', el.dataset.go === nav));
     const s = $('#q');
     if (r.view !== 'search' && s.value) s.value = '';
     $$('#liblist .lrow').forEach((el) => el.classList.toggle('active', el.dataset.go === `${r.view}:${r.id}` || (r.view === 'liked' && el.dataset.go === 'liked')));
@@ -331,6 +413,9 @@
     'fg-toggle': () => { const boxes = $$('#modal .fg input'); const on = boxes.some((b) => !b.checked); boxes.forEach((b) => { b.checked = on; }); },
     'fg-create': () => { const keys = $$('#modal .fg input:checked').map((b) => b.value); if (!keys.length) return closeModal(); api.createPlaylistsFromFolders(keys).then((r) => { closeModal(); chip = 'playlists'; merge(r); toast(`Created ${r.created} playlist${r.created === 1 ? '' : 's'}`); }); },
     rescan: () => api.rescan(),
+    addvideofolder: () => api.addVideoFolder().then((r) => { if (!r.canceled) { S.videoFolders = r.videoFolders; toast('Looking for videos…'); if (route().view === 'settings') renderView(true); } }),
+    removevideofolder: (arg) => api.removeVideoFolder(arg).then((r) => { S.videoFolders = r.videoFolders; }),
+    vsort: (arg) => { vsort = arg; try { localStorage.setItem('lf.vsort', arg); } catch {} renderView(true); },
     removefolder: (arg) => api.removeFolder(arg).then((r) => { S.folders = r.folders; }),
     newplaylist: () => api.createPlaylist().then((r) => { merge(r); navigate({ view: 'playlist', id: r.id }); }),
     editpl: (arg) => editPlaylist(arg),
@@ -411,7 +496,11 @@
       const v = $('#vol'); v.value = Math.round(P.audio.volume * 100); v.dispatchEvent(new Event('input'));
       return;
     }
-    if (e.key === ' ' && !e.target.closest('input,textarea,select,button')) { e.preventDefault(); P.toggle(); }
+    if (e.key === ' ' && !e.target.closest('input,textarea,select,button,video')) {
+      e.preventDefault();
+      const vid = $('#vid');
+      if (vid) { if (vid.paused) vid.play().catch(() => {}); else vid.pause(); } else P.toggle();
+    }
   });
   $('#main').addEventListener('scroll', closeMenu, { passive: true });
 
@@ -432,9 +521,12 @@
   // ---------- boot ----------
   function applyState(st) {
     S.folders = st.folders; S.lastScanAt = st.lastScanAt;
+    S.videoFolders = st.videoFolders; S.videos = st.videos;
     L.mergeLite(st);
     L.setTracks(st.tracks);
-    renderSide(); renderView(true); L.renderBar();
+    renderSide(); L.renderBar();
+    // re-rendering would restart a playing video
+    if (route().view !== 'video') renderView(true);
   }
   (async () => {
     L.initBar();
@@ -451,7 +543,7 @@
       bar.firstElementChild.style.width = p.total ? (p.done / p.total) * 100 + '%' : '8%';
       $('#scanFoot').textContent = scanText();
       const t = $('#scanTxt'); if (t) t.textContent = scanText();
-      if (was && !p.scanning && route().view === 'home' && !S.list.length) renderView(true);
+      if (was && !p.scanning && route().view === 'music' && !S.list.length) renderView(true);
       if (was && !p.scanning && pendingGroups) { const root = pendingGroups; pendingGroups = null; offerGroups(root, false); }
     });
     api.onMediaKey((k) => (k === 'playpause' ? P.toggle() : k === 'next' ? P.next(true) : P.prev()));

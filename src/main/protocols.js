@@ -8,6 +8,8 @@ const { Readable } = require('stream');
 const MIME = {
   '.mp3': 'audio/mpeg', '.flac': 'audio/flac', '.m4a': 'audio/mp4', '.aac': 'audio/aac',
   '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.opus': 'audio/ogg',
+  // Chromium sniffs the real container; mov is ISO-BMFF like mp4, mkv is the WebM superset.
+  '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/mp4', '.webm': 'video/webm', '.mkv': 'video/webm',
 };
 const notFound = () => new Response('Not found', { status: 404 });
 
@@ -39,6 +41,11 @@ async function handle(store, req) {
     const t = /^[a-f0-9]{16}$/.test(name) && store.state.tracks[name];
     if (!t || !t.available) return notFound();
     return serveFile(t.path, MIME[path.extname(t.path).toLowerCase()] || 'application/octet-stream', range);
+  }
+  if (url.hostname === 'video') {
+    const v = /^[a-f0-9]{16}$/.test(name) && store.state.videos[name];
+    if (!v || !v.available) return notFound();
+    return serveFile(v.path, MIME[path.extname(v.path).toLowerCase()] || 'application/octet-stream', range);
   }
   if (url.hostname === 'art') {
     if (!/^[a-f0-9]{40}$/.test(name)) return notFound();

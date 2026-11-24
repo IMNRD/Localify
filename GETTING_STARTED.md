@@ -55,11 +55,14 @@ To remove it, close Localify and double-click **`Uninstall Localify.bat`**. It r
 1. Click **Add music folder** and pick the folder that holds your music (subfolders are included).
 2. Wait a few seconds. A thin green line under the search bar shows the scan. Your songs, albums and artists appear. If your folder has subfolders with music in them, Localify asks whether to **make a playlist from each subfolder**: all are ticked, so untick any you don't want, or choose **Not now**. You can do this later from **Settings → Playlists from folders…**.
 3. Click the **+** next to "Your Library" to create a playlist. Click its cover (or the pencil) → **Choose image…** to give it a picture. Right-click any song → **Add to playlist**.
-4. Added or moved files? Open **Settings** (gear icon) → **Rescan**. Localify also rescans every time it starts.
+4. Added or moved files? Open **Settings** (gear icon, top right) → **Rescan**. Localify also rescans every time it starts.
+5. Videos: click **Videos** in the sidebar → **Add video folder** (or **Settings → Add video folder**). Localify plays MP4, M4V, WebM, MOV and most MKV files; AVI, WMV and FLV are not supported. Sort with the buttons next to "All videos". Stop a video part-way and it appears under **Continue watching**, and opening it again resumes where you left off.
+
+The sidebar: **Home** shows your top playlists and recently watched videos, **Music** (where Localify opens) has your music and the full song list, **Videos** has your videos.
 
 ## Settings, shortcuts, data
-- **Keys:** Space = play/pause, Ctrl+→ / Ctrl+← = next / previous, Ctrl+↑ / Ctrl+↓ = volume, Ctrl+F = search. Keyboard media keys (play/pause, next, previous) work too.
-- **Where your data lives:** `%APPDATA%\Localify` (paste that into the File Explorer address bar). It holds your library index, playlists, extracted album art and playlist covers. Your music files are never changed or copied.
+- **Keys:** Space = play/pause (the video, when one is open), Ctrl+→ / Ctrl+← = next / previous, Ctrl+↑ / Ctrl+↓ = volume, Ctrl+F = search. Keyboard media keys (play/pause, next, previous) work too.
+- **Where your data lives:** `%APPDATA%\Localify` (paste that into the File Explorer address bar). It holds your library index, playlists, video resume positions, extracted album art and playlist covers. Your music files are never changed or copied.
 - **Start fresh:** close Localify and delete that folder.
 
 ## Configuration, keys and security

@@ -5,7 +5,7 @@ const path = require('path');
 function createStore(dir) {
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, 'library.json');
-  const empty = () => ({ folders: [], tracks: {}, playlists: [], liked: [], recent: [], lastScanAt: 0 });
+  const empty = () => ({ folders: [], tracks: {}, playlists: [], liked: [], recent: [], lastScanAt: 0, videoFolders: [], videos: {} });
   let state = empty();
   let recovered = false;
   let timer = null;
@@ -38,7 +38,7 @@ function createStore(dir) {
     save,
     flush,
     snapshot() {
-      return { ...state, tracks: Object.values(state.tracks) };
+      return { ...state, tracks: Object.values(state.tracks), videos: Object.values(state.videos) };
     },
     lite() {
       return { playlists: state.playlists, liked: state.liked, recent: state.recent };

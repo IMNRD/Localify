@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { scan, trackId } = require('../src/main/scanner');
+const { scan, scanVideos, trackId } = require('../src/main/scanner');
 
 try { execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' }); } catch { console.log('ffmpeg not found - skipping scanner test'); process.exit(0); }
 
@@ -74,6 +74,21 @@ const artDir = path.join(root, 'art');
   // overlapping folders dedupe by id
   store.state.folders = [music, nested];
   assert.strictEqual(await scan(store, artDir), 5, 'overlapping folders do not double count');
+
+  // videos: supported containers only; resume data survives rescans; missing -> unavailable
+  const vids = path.join(root, 'videos', 'sub');
+  fs.mkdirSync(vids, { recursive: true });
+  for (const n of ['a.mp4', 'b.MKV', 'c.webm', 'd.mov', 'e.m4v', 'skip.avi', 'skip.wmv', 'skip.flv', 'notes.txt']) fs.writeFileSync(path.join(vids, n), 'x');
+  Object.assign(store.state, { videoFolders: [path.join(root, 'videos')], videos: {} });
+  assert.strictEqual(await scanVideos(store), 5, 'indexes 5 playable videos');
+  const V = store.state.videos, va = V[trackId(path.join(vids, 'a.mp4'))];
+  assert.strictEqual(va.name, 'a'); assert.strictEqual(va.ext, 'mp4'); assert.strictEqual(V[trackId(path.join(vids, 'b.MKV'))].ext, 'mkv');
+  Object.assign(va, { pos: 42, dur: 100, watchedAt: 5 });
+  fs.rmSync(path.join(vids, 'c.webm'));
+  await scanVideos(store);
+  const va2 = V[trackId(path.join(vids, 'a.mp4'))];
+  assert.deepStrictEqual([va2.pos, va2.dur, va2.watchedAt], [42, 100, 5], 'resume position kept on rescan');
+  assert.strictEqual(V[trackId(path.join(vids, 'c.webm'))].available, false, 'missing video marked unavailable');
 
   console.log('scanner tests passed');
   fs.rmSync(root, { recursive: true, force: true });
