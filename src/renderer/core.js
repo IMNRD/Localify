@@ -59,7 +59,7 @@
 
   const S = (L.S = {
     tracks: new Map(), list: [], sorted: [], albums: new Map(), artists: new Map(), albumList: [], artistList: [],
-    playlists: [], liked: new Set(), likedOrder: [], recent: [], folders: [], lastScanAt: 0, scan: { scanning: false },
+    playlists: [], liked: new Set(), likedOrder: [], recent: [], folders: [], lastScanAt: 0, scan: { scanning: false }, videos: [], videoFolders: [],
   });
 
   L.setTracks = (arr) => {

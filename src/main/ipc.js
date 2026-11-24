@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { pathToFileURL } = require('url');
-const { scan } = require('./scanner');
+const { scan, scanVideos } = require('./scanner');
 const { computeGroups } = require('./folders');
 // Decodes any image Chromium can read (png/jpg/webp/gif, honours EXIF rotation) in a throw-away,
 // script-isolated window, crops the centre square and returns a 640x640 JPEG buffer.
@@ -57,6 +57,7 @@ function register({ store, getWin }) {
     send('scan-progress', { scanning: true, done: 0, total: 0 });
     try {
       await scan(store, artDir, (p) => send('scan-progress', { scanning: true, ...p }), () => send('state', store.snapshot()));
+      await scanVideos(store);
     } finally {
       scanning = false;
       send('scan-progress', { scanning: false });
@@ -99,6 +100,36 @@ function register({ store, getWin }) {
     return { folders: store.state.folders };
   });
   h('rescan', () => { runScan(); return true; });
+
+  h('addVideoFolder', async () => {
+    const r = await dialog.showOpenDialog(getWin(), { properties: ['openDirectory'], title: 'Choose a video folder' });
+    if (r.canceled || !r.filePaths[0]) return { canceled: true };
+    const dir = path.resolve(r.filePaths[0]);
+    if (!store.state.videoFolders.some((f) => norm(f) === norm(dir))) store.state.videoFolders.push(dir);
+    store.save();
+    runScan();
+    return { videoFolders: store.state.videoFolders };
+  });
+  h('removeVideoFolder', (folder) => {
+    if (!isStr(folder, 1024)) throw new Error('Bad folder');
+    store.state.videoFolders = store.state.videoFolders.filter((f) => norm(f) !== norm(folder));
+    for (const v of Object.values(store.state.videos)) {
+      if (!store.state.videoFolders.some((f) => isUnder(v.path, f))) delete store.state.videos[v.id];
+    }
+    store.save();
+    send('state', store.snapshot());
+    return { videoFolders: store.state.videoFolders };
+  });
+  const isNum = (n) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n < 1e7;
+  h('saveVideoProgress', (id, pos, dur) => {
+    const v = isStr(id, 16) && store.state.videos[id];
+    if (!v || !isNum(pos) || !isNum(dur)) throw new Error('Bad progress');
+    v.pos = Math.min(pos, dur || pos);
+    if (dur) v.dur = dur;
+    v.watchedAt = Date.now();
+    store.save();
+    return true;
+  });
 
   const rootArg = (root) => {
     if (root === null || root === undefined) return null;

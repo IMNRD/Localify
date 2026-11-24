@@ -39,6 +39,13 @@ ff('-f', 'lavfi', '-i', 'testsrc=s=800x400', '-frames:v', '1', img);
 ff('-f', 'lavfi', '-i', 'testsrc=s=500x300', '-frames:v', '1', webp);
 ff('-f', 'lavfi', '-i', 'testsrc=s=320x240:d=1', '-frames:v', '1', gif);
 fs.writeFileSync(fake, 'this is not an image');
+// video fixtures: 30 s H.264 mp4, VP9 webm, H.264 mkv, plus an avi that must be ignored
+const videos = path.join(root, 'videos');
+fs.mkdirSync(videos, { recursive: true });
+ff('-f', 'lavfi', '-i', 'testsrc=s=320x180:d=30', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', path.join(videos, 'Holiday Day 2.mp4'));
+ff('-f', 'lavfi', '-i', 'testsrc=s=320x180:d=4', '-c:v', 'libvpx-vp9', path.join(videos, 'Clip.webm'));
+ff('-f', 'lavfi', '-i', 'testsrc=s=640x360:d=6', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', path.join(videos, 'Concert.mkv'));
+fs.writeFileSync(path.join(videos, 'old.avi'), 'x');
 
 let nextDialog = null;
 dialog.showOpenDialog = async () => nextDialog;
@@ -60,6 +67,7 @@ app.whenReady().then(async () => {
 
   await shot('01-empty');
   await check('empty library shows welcome CTA', async () => assert.ok((await js('document.querySelector("#view").innerText')).includes('Add a folder to fill this up')));
+  await check('app opens on the Music tab', async () => assert.strictEqual(await js('document.querySelector("[data-go=music]").classList.contains("active")'), true));
 
   nextDialog = { canceled: false, filePaths: [music] };
   await js('window.api.addFolder()');
@@ -110,7 +118,7 @@ app.whenReady().then(async () => {
     assert.ok((await js('document.querySelector("#view").innerText')).includes('Nothing here yet'));
   });
   await js(`window.api.addToPlaylist('${pid}', [...L.S.albums.values()].map(a=>a.trackIds[0]).concat(L.S.sorted[0].id)).then(l=>{L.mergeLite(l)})`);
-  await js('document.querySelector("[data-go=songs]").click()'); await sleep(200);
+  await js('document.querySelector("[data-go=music]").click()'); await sleep(200);
   await js(`document.querySelector("#liblist [data-pl]").click()`); await sleep(500);
   await shot('04-playlist-mosaic');
   await check('playlist mosaic fallback renders', async () => assert.strictEqual(await js('document.querySelectorAll(".hcover .art.mosaic img").length'), 4));
@@ -209,7 +217,7 @@ app.whenReady().then(async () => {
     await js(`document.querySelector('[data-act=delete-go]').click()`); await sleep(600);
     assert.strictEqual(await js('L.S.playlists.length'), 0);
     assert.strictEqual(fs.readdirSync(imgDir).length, 0, 'cover file removed');
-    assert.ok((await js('document.querySelector("#view").innerText')).includes('Good'), 'navigated home');
+    assert.strictEqual(await js('document.querySelector("[data-go=home]").classList.contains("active")'), true, 'navigated home');
   });
 
   // playlists from subfolders
@@ -247,10 +255,89 @@ app.whenReady().then(async () => {
     assert.strictEqual(await js(`window.api.getFolderGroups('/etc').then(()=>'ok').catch(()=>'rejected')`), 'rejected');
   });
 
+  // layout + videos
+  await check('sidebar has Home/Search/Music/Videos, no Songs; gear is in the top bar', async () => {
+    assert.deepStrictEqual(await js('[...document.querySelectorAll(".nav [data-go]")].map(b=>b.dataset.go)'), ['home', 'search', 'music', 'videos']);
+    assert.strictEqual(await js('!!document.querySelector(".topbar [data-go=settings]") && !document.querySelector("#side [data-go=settings]")'), true);
+  });
+  await js(`document.querySelector('[data-go=videos]').click()`); await sleep(200);
+  await check('Videos tab offers to add a folder when empty', async () => assert.ok(await js('!!document.querySelector("#view [data-act=addvideofolder]")')));
+  nextDialog = { canceled: false, filePaths: [videos] };
+  await js(`document.querySelector('#view [data-act=addvideofolder]').click()`);
+  for (let i = 0; i < 60 && (await js('L.S.videos.length')) < 3; i++) await sleep(250);
+  await check('video folder indexes mp4/webm/mkv and skips avi', async () => assert.deepStrictEqual(await js('L.S.videos.map(v=>v.ext).sort()'), ['mkv', 'mp4', 'webm']));
+  const vid = await js('L.S.videos.find(v=>v.ext==="mp4").id');
+  await check('video served with Range -> 206 video/mp4; unknown id 404', async () => {
+    const r = await get(`localify://video/${vid}`, { Range: 'bytes=0-99' });
+    assert.strictEqual(r.status, 206); assert.strictEqual(r.headers.get('content-type'), 'video/mp4');
+    assert.strictEqual((await get('localify://video/0000000000000000')).status, 404);
+    assert.strictEqual((await get('localify://video/..%2F..%2Flibrary.json')).status, 404);
+  });
+  await check('progress IPC validates its arguments', async () => {
+    for (const a of [`'nope',1,2`, `'${vid}',-1,2`, `'${vid}','5',30`, `'${vid}',1,Infinity`]) assert.strictEqual(await js(`window.api.saveVideoProgress(${a}).then(()=>'ok').catch(()=>'rejected')`), 'rejected', a);
+  });
+  await js(`window.api.rescan()`); await sleep(1500);
+  await js(`document.querySelector('[data-go=videos]').click()`); await sleep(200);
+  await js(`document.querySelector('#view [data-act=vsort][data-arg=size]').click()`); await sleep(200);
+  await check('sort by size puts the largest first', async () => assert.strictEqual(await js('document.querySelector("#view .vcard .ct").textContent'), await js('L.S.videos.slice().sort((a,b)=>b.size-a.size)[0].name')));
+  await js(`document.querySelector('#view [data-act=vsort][data-arg=name]').click()`); await sleep(150);
+  await js(`L.P.play(L.S.sorted.slice(0,3).map(t=>t.id), 0)`); await sleep(800);
+  await js(`document.querySelector('#view [data-go="video:${vid}"]').click()`);
+  for (let i = 0; i < 40 && !(await js('document.querySelector("#vid")?.currentTime > 0.5')); i++) await sleep(250);
+  await check('video plays and pauses the music', async () => {
+    const s = await js('({t:document.querySelector("#vid").currentTime, err:document.querySelector("#vid").error?.code, music:L.P.audio.paused, nav:document.querySelector("[data-go=videos]").classList.contains("active")})');
+    assert.ok(s.t > 0.5 && !s.err, JSON.stringify(s)); assert.strictEqual(s.music, true, 'music paused'); assert.strictEqual(s.nav, true, 'Videos highlighted');
+  });
+  await check('Space toggles the video, not the music', async () => {
+    await js(`document.body.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}))`); await sleep(200);
+    assert.deepStrictEqual(await js('[document.querySelector("#vid").paused, L.P.audio.paused]'), [true, true]);
+    await js(`document.body.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}))`); await sleep(400);
+    assert.strictEqual(await js('document.querySelector("#vid").paused'), false);
+  });
+  await js(`(v => { v.currentTime = 12; })(document.querySelector('#vid'))`); await sleep(800);
+  await shot('14-video-player');
+  await js(`document.querySelector('[data-go=videos]').click()`); await sleep(500);
+  await check('leaving the video saves its position', async () => {
+    const v = await js(`window.api.getState().then(s=>s.videos.find(v=>v.id==='${vid}'))`);
+    assert.ok(v.pos >= 12 && v.pos < 15 && Math.round(v.dur) === 30 && v.watchedAt > 0, JSON.stringify(v));
+  });
+  await shot('15-videos');
+  await check('Continue watching lists it with time left', async () => {
+    const t = await js('document.querySelector("#view").innerText');
+    assert.ok(t.includes('Continue watching') && /0:1\d left/.test(t), t);
+  });
+  await check('reopening resumes where it stopped', async () => {
+    await js(`document.querySelector('#view [data-go="video:${vid}"]').click()`);
+    for (let i = 0; i < 40 && !(await js('document.querySelector("#vid")?.currentTime > 0')); i++) await sleep(250);
+    const t = await js('document.querySelector("#vid").currentTime'); assert.ok(t >= 11.5, 't=' + t);
+  });
+  await check('state refresh does not restart a playing video', async () => {
+    await js(`window.api.rescan()`); await sleep(1500);
+    assert.strictEqual(await js('document.querySelector("#vid").currentTime >= 11.5'), true);
+  });
+  await check('finishing a video marks it watched and drops it from Continue watching', async () => {
+    await js(`(v => { v.currentTime = v.duration - 0.3; })(document.querySelector('#vid'))`);
+    for (let i = 0; i < 20 && !(await js('document.querySelector("#vid").ended')); i++) await sleep(250);
+    await js(`document.querySelector('[data-go=videos]').click()`); await sleep(400);
+    assert.ok(!(await js('document.querySelector("#view").innerText')).includes('Continue watching'));
+  });
+  await js(`document.querySelector('[data-go=home]').click()`); await sleep(300);
+  await shot('16-home');
+  await check('Home shows top playlists and recently watched videos', async () => {
+    const t = await js('document.querySelector("#view").innerText');
+    assert.ok(t.includes('Your top playlists') && t.includes('Recently watched') && t.includes('Holiday Day 2'), t);
+  });
+  await js(`document.querySelector('[data-go=settings]').click()`); await sleep(200);
+  await check('Settings lists the video folder and can remove it', async () => {
+    assert.ok((await js('document.querySelector("#view").innerText')).includes('Video folders'));
+    await js(`document.querySelector('[data-act=removevideofolder]').click()`); await sleep(500);
+    assert.strictEqual(await js('L.S.videos.length'), 0);
+  });
+
   // 20k virtualization
   await js(`(() => { const a=[]; for(let i=0;i<20000;i++) a.push({id:('0000000000000000'+i.toString(16)).slice(-16),path:'x',title:'Song '+i,artist:'Artist '+(i%300),albumArtist:'',album:'Album '+(i%1500),trackNo:i%12,discNo:0,year:2000,durationSec:200,artHash:null,addedAt:i,available:true,plays:0}); L.setTracks(a); })()`);
   const t0 = Date.now();
-  await js('document.querySelector("[data-go=songs]").click()'); await sleep(300);
+  await js('document.querySelector("[data-go=music]").click()'); await sleep(300);
   await check('20,000 tracks: Songs view renders < 150 rows', async () => { const n = await js('document.querySelectorAll("#view .row").length'); assert.ok(n > 10 && n < 150, 'rows=' + n); });
   await check('20,000 tracks: scrolled rows update', async () => { await js('document.querySelector("#main").scrollTop = 56*10000'); await sleep(400); assert.ok((await js('document.querySelector("#view .row .t").textContent')).includes('Song '), 'rows after scroll'); assert.ok(await js('+document.querySelector("#view .row").dataset.i') > 9000); });
   results.push(['INFO', `20k view render+scroll took ${Date.now() - t0}ms`]);
